@@ -1,6 +1,8 @@
+# Godot Qube - Code quality analyzer for GDScript
+# https://poplava.itch.io
 @tool
 extends EditorPlugin
-## Godot Qube Plugin - Adds a dock for static analysis with clickable navigation
+## Adds a dock for static analysis with clickable navigation
 
 var dock: Control
 

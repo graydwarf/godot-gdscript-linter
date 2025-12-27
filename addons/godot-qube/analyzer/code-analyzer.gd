@@ -1,6 +1,8 @@
-class_name CodeAnalyzer
+# Godot Qube - Code quality analyzer for GDScript
+# https://poplava.itch.io
+class_name QubeAnalyzer
 extends RefCounted
-## Core code analysis engine - reusable by CLI, plugin, or external tools
+## Core analysis engine - reusable by CLI, plugin, or external tools
 
 const AnalysisConfigClass = preload("res://addons/godot-qube/analyzer/analysis-config.gd")
 const AnalysisResultClass = preload("res://addons/godot-qube/analyzer/analysis-result.gd")
@@ -9,6 +11,12 @@ const IssueClass = preload("res://addons/godot-qube/analyzer/issue.gd")
 
 const IGNORE_PATTERN := "qube:ignore"
 const IGNORE_NEXT_LINE_PATTERN := "qube:ignore-next-line"
+
+# Naming convention patterns
+const SNAKE_CASE_PATTERN := "^[a-z][a-z0-9_]*$"
+const PASCAL_CASE_PATTERN := "^[A-Z][a-zA-Z0-9]*$"
+const SCREAMING_SNAKE_PATTERN := "^[A-Z][A-Z0-9_]*$"
+const PRIVATE_SNAKE_PATTERN := "^_[a-z][a-z0-9_]*$"
 
 var config
 var result
@@ -205,6 +213,10 @@ func _analyze_file_level(lines: Array, file_path: String, file_result) -> void:
 		if config.check_missing_types:
 			_check_variable_type_hints(trimmed, file_path, line_num)
 
+		# Naming convention checks
+		if config.check_naming_conventions:
+			_check_naming_conventions(line, file_path, line_num)
+
 func _analyze_functions(lines: Array, file_path: String, file_result) -> void:
 	var current_func: Dictionary = {}
 	var in_function := false
@@ -311,6 +323,9 @@ func _finalize_function(func_data: Dictionary, body_lines: Array, file_path: Str
 		if not func_name.begins_with("_"):
 			_add_issue(file_path, func_line, IssueClass.Severity.INFO, "missing-return-type",
 				"Function '%s' has no return type annotation" % func_name)
+
+	# Function naming convention check
+	_check_function_naming(func_data.name, file_path, func_line)
 
 func _calculate_max_nesting(body_lines: Array) -> int:
 	var max_indent := 0
@@ -515,3 +530,81 @@ func _check_god_class(file_path: String, file_result) -> void:
 	if is_god_class:
 		_add_issue(file_path, 1, IssueClass.Severity.WARNING, "god-class",
 			"God class detected: %s" % ", ".join(reasons))
+
+
+# ========== Naming Convention Checks ==========
+
+func _is_snake_case(name: String) -> bool:
+	var regex := RegEx.new()
+	regex.compile(SNAKE_CASE_PATTERN)
+	return regex.search(name) != null
+
+func _is_private_snake_case(name: String) -> bool:
+	var regex := RegEx.new()
+	regex.compile(PRIVATE_SNAKE_PATTERN)
+	return regex.search(name) != null
+
+func _is_pascal_case(name: String) -> bool:
+	var regex := RegEx.new()
+	regex.compile(PASCAL_CASE_PATTERN)
+	return regex.search(name) != null
+
+func _is_screaming_snake_case(name: String) -> bool:
+	var regex := RegEx.new()
+	regex.compile(SCREAMING_SNAKE_PATTERN)
+	return regex.search(name) != null
+
+func _check_naming_conventions(line: String, file_path: String, line_num: int) -> void:
+	var trimmed := line.strip_edges()
+
+	# Check class_name
+	if trimmed.begins_with("class_name "):
+		var class_name_val := trimmed.substr(11).split(" ")[0].strip_edges()
+		if not _is_pascal_case(class_name_val):
+			_add_issue(file_path, line_num, IssueClass.Severity.WARNING, "naming-class",
+				"Class name '%s' should be PascalCase" % class_name_val)
+
+	# Check signal names
+	if trimmed.begins_with("signal "):
+		var signal_name := trimmed.substr(7).split("(")[0].strip_edges()
+		if not _is_snake_case(signal_name):
+			_add_issue(file_path, line_num, IssueClass.Severity.INFO, "naming-signal",
+				"Signal '%s' should be snake_case" % signal_name)
+
+	# Check const names
+	if trimmed.begins_with("const "):
+		var after_const := trimmed.substr(6).strip_edges()
+		var const_name := after_const.split(":")[0].split("=")[0].strip_edges()
+		if not _is_screaming_snake_case(const_name) and not _is_pascal_case(const_name):
+			_add_issue(file_path, line_num, IssueClass.Severity.INFO, "naming-const",
+				"Constant '%s' should be SCREAMING_SNAKE_CASE or PascalCase" % const_name)
+
+	# Check enum names
+	if trimmed.begins_with("enum "):
+		var after_enum := trimmed.substr(5).strip_edges()
+		var enum_name := after_enum.split("{")[0].split(" ")[0].strip_edges()
+		if enum_name != "" and not _is_pascal_case(enum_name):
+			_add_issue(file_path, line_num, IssueClass.Severity.INFO, "naming-enum",
+				"Enum '%s' should be PascalCase" % enum_name)
+
+func _check_function_naming(func_name: String, file_path: String, line_num: int) -> void:
+	if not config.check_naming_conventions:
+		return
+
+	# Skip built-in overrides
+	var builtins := ["_init", "_ready", "_process", "_physics_process", "_enter_tree",
+		"_exit_tree", "_input", "_unhandled_input", "_gui_input", "_draw", "_notification",
+		"_get", "_set", "_get_property_list", "_to_string", "_get_configuration_warnings"]
+	if func_name in builtins:
+		return
+
+	# Private functions should be _snake_case
+	if func_name.begins_with("_"):
+		if not _is_private_snake_case(func_name):
+			_add_issue(file_path, line_num, IssueClass.Severity.INFO, "naming-function",
+				"Private function '%s' should be _snake_case" % func_name)
+	else:
+		# Public functions should be snake_case
+		if not _is_snake_case(func_name):
+			_add_issue(file_path, line_num, IssueClass.Severity.INFO, "naming-function",
+				"Function '%s' should be snake_case" % func_name)

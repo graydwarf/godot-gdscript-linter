@@ -1,4 +1,6 @@
-class_name Issue
+# Godot Qube - Code quality analyzer for GDScript
+# https://poplava.itch.io
+class_name QubeIssue
 extends RefCounted
 ## Represents a single code quality issue with location info for navigation
 

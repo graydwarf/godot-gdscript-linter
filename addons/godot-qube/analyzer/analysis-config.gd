@@ -1,6 +1,8 @@
-class_name AnalysisConfig
+# Godot Qube - Code quality analyzer for GDScript
+# https://poplava.itch.io
+class_name QubeConfig
 extends Resource
-## Configuration for code analysis thresholds and enabled checks
+## Configuration for analysis thresholds and enabled checks
 
 # File limits
 @export var line_limit_soft: int = 200
@@ -29,6 +31,7 @@ extends Resource
 @export var check_missing_types: bool = true
 @export var check_cyclomatic_complexity: bool = true
 @export var check_god_class: bool = true
+@export var check_naming_conventions: bool = true
 
 # Complexity thresholds
 @export var cyclomatic_warning: int = 10
@@ -131,6 +134,7 @@ func _apply_config_value(section: String, key: String, value: String) -> void:
 				"missing_types": check_missing_types = enabled
 				"god_class": check_god_class = enabled
 				"long_lines": check_long_lines = enabled
+				"naming_conventions": check_naming_conventions = enabled
 		"exclude":
 			if key == "paths":
 				# Parse comma-separated list

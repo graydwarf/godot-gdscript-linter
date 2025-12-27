@@ -20,6 +20,7 @@ A static code analysis plugin for GDScript that helps you maintain code quality,
 | **Commented-Out Code** | Info | Dead code left in comments |
 | **Missing Type Hints** | Info | Variables and functions without type annotations |
 | **God Classes** | Warning | Classes with too many public functions or signals |
+| **Naming Conventions** | Info/Warning | Non-standard naming (snake_case, PascalCase, etc.) |
 
 ### Editor Integration
 
@@ -44,6 +45,7 @@ godot --headless --path /path/to/godot-qube --script res://addons/godot-qube/ana
 # Output formats
 godot --headless --script res://addons/godot-qube/analyzer/analyze-cli.gd -- --clickable  # Godot Output panel format
 godot --headless --script res://addons/godot-qube/analyzer/analyze-cli.gd -- --json       # JSON format
+godot --headless --script res://addons/godot-qube/analyzer/analyze-cli.gd -- --html -o report.html  # HTML report
 ```
 
 **Exit Codes:**
@@ -121,6 +123,7 @@ magic_numbers = true
 commented_code = true
 missing_types = true
 god_class = true
+naming_conventions = true
 
 [exclude]
 paths = addons/, .godot/, tests/mocks/
@@ -171,7 +174,7 @@ These numbers are not flagged as they are commonly self-explanatory:
 
 ## Requirements
 
-- Godot 4.5+
+- Godot 4.0+
 - GDScript only (no C# support)
 
 ## License
@@ -186,7 +189,5 @@ Contributions are welcome! Please feel free to submit issues and pull requests.
 
 - [ ] Unused variable detection
 - [ ] Auto-fix for simple issues
-- [ ] Naming convention enforcement
-- [ ] HTML report export
 - [ ] Incremental analysis (caching)
 - [ ] Duplicate code detection

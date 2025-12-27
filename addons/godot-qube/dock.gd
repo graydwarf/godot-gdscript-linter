@@ -1,6 +1,8 @@
+# Godot Qube - Code quality analyzer for GDScript
+# https://poplava.itch.io
 @tool
 extends Control
-## Code Quality Dock - Displays analysis results with clickable navigation
+## Displays analysis results with clickable navigation
 
 const ISSUES_PER_CATEGORY := 100
 
@@ -20,13 +22,19 @@ const ISSUE_TYPES := {
 	"too-many-params": "Too Many Params",
 	"deep-nesting": "Deep Nesting",
 	"high-complexity": "High Complexity",
-	"god-class": "God Class"
+	"god-class": "God Class",
+	"naming-class": "Naming: Class",
+	"naming-function": "Naming: Function",
+	"naming-signal": "Naming: Signal",
+	"naming-const": "Naming: Constant",
+	"naming-enum": "Naming: Enum"
 }
 
 # UI References
 var results_label: RichTextLabel
 var scan_button: Button
 var export_button: Button
+var html_export_button: Button
 var severity_filter: OptionButton
 var type_filter: OptionButton
 var file_filter: LineEdit
@@ -52,7 +60,7 @@ var current_file_filter: String = ""
 # Settings (persisted via EditorSettings if available)
 var show_total_issues: bool = true
 var show_debt: bool = true
-var show_export_button: bool = true
+var show_export_button: bool = false
 
 # Preload the analyzer scripts
 var CodeAnalyzerScript = preload("res://addons/godot-qube/analyzer/code-analyzer.gd")
@@ -68,6 +76,7 @@ func _ready() -> void:
 	results_label = $VBox/ScrollContainer/ResultsLabel
 	scan_button = $VBox/Toolbar/ScanButton
 	export_button = $VBox/Toolbar/ExportButton
+	html_export_button = $VBox/Toolbar/HTMLExportButton
 	severity_filter = $VBox/Toolbar/SeverityFilter
 	type_filter = $VBox/Toolbar/TypeFilter
 	file_filter = $VBox/Toolbar/FileFilter
@@ -92,6 +101,7 @@ func _ready() -> void:
 	results_label.meta_clicked.connect(_on_link_clicked)
 	scan_button.pressed.connect(_on_scan_pressed)
 	export_button.pressed.connect(_on_export_pressed)
+	html_export_button.pressed.connect(_on_html_export_pressed)
 	severity_filter.item_selected.connect(_on_severity_filter_changed)
 	type_filter.item_selected.connect(_on_type_filter_changed)
 	file_filter.text_changed.connect(_on_file_filter_changed)
@@ -128,18 +138,57 @@ func _ready() -> void:
 	_load_settings()
 
 	export_button.disabled = true
+	html_export_button.disabled = true
 	settings_panel.visible = false
 
 	print("Code Quality: Plugin ready")
 
 
-func _populate_type_filter() -> void:
+func _populate_type_filter(severity_filter: String = "all") -> void:
 	type_filter.clear()
 	var idx := 0
+
+	# Always add "All Types" first
+	type_filter.add_item("All Types", idx)
+	type_filter.set_item_metadata(idx, "all")
+	idx += 1
+
+	# Get available types based on severity filter
+	var available_types := _get_available_types_for_severity(severity_filter)
+
 	for check_id in ISSUE_TYPES:
-		type_filter.add_item(ISSUE_TYPES[check_id], idx)
-		type_filter.set_item_metadata(idx, check_id)
-		idx += 1
+		if check_id == "all":
+			continue  # Already added
+		# Only add types that have issues at this severity (or all if no filter)
+		if severity_filter == "all" or check_id in available_types:
+			type_filter.add_item(ISSUE_TYPES[check_id], idx)
+			type_filter.set_item_metadata(idx, check_id)
+			idx += 1
+
+
+func _get_available_types_for_severity(severity_filter: String) -> Dictionary:
+	# Returns a dictionary of check_ids that have issues at the given severity
+	var available: Dictionary = {}
+	if not current_result:
+		return available
+
+	var Issue = IssueScript
+	for issue in current_result.issues:
+		var matches_severity := false
+		match severity_filter:
+			"all":
+				matches_severity = true
+			"critical":
+				matches_severity = issue.severity == Issue.Severity.CRITICAL
+			"warning":
+				matches_severity = issue.severity == Issue.Severity.WARNING
+			"info":
+				matches_severity = issue.severity == Issue.Severity.INFO
+
+		if matches_severity:
+			available[issue.check_id] = true
+
+	return available
 
 
 func _load_settings() -> void:
@@ -148,7 +197,7 @@ func _load_settings() -> void:
 	# Load display settings from EditorSettings
 	show_total_issues = editor_settings.get_setting("code_quality/display/show_issues") if editor_settings.has_setting("code_quality/display/show_issues") else true
 	show_debt = editor_settings.get_setting("code_quality/display/show_debt") if editor_settings.has_setting("code_quality/display/show_debt") else true
-	show_export_button = editor_settings.get_setting("code_quality/display/show_export") if editor_settings.has_setting("code_quality/display/show_export") else true
+	show_export_button = editor_settings.get_setting("code_quality/display/show_export") if editor_settings.has_setting("code_quality/display/show_export") else false
 
 	# Load analysis limits
 	current_config.line_limit_soft = editor_settings.get_setting("code_quality/limits/file_lines_warn") if editor_settings.has_setting("code_quality/limits/file_lines_warn") else 200
@@ -177,6 +226,7 @@ func _on_scan_pressed() -> void:
 	print("Code Quality: Scan button pressed")
 	scan_button.disabled = true
 	export_button.disabled = true
+	html_export_button.disabled = true
 	status_label.text = "Scanning..."
 	results_label.text = "[color=#888888]Analyzing codebase...[/color]"
 
@@ -197,6 +247,7 @@ func _run_analysis() -> void:
 
 	scan_button.disabled = false
 	export_button.disabled = false
+	html_export_button.disabled = false
 
 
 func _update_status() -> void:
@@ -236,6 +287,266 @@ func _on_export_pressed() -> void:
 		status_label.text = "Export failed!"
 
 
+func _on_html_export_pressed() -> void:
+	if not current_result:
+		return
+
+	var html := _generate_html_report()
+	var export_path := "res://code_quality_report.html"
+
+	var file := FileAccess.open(export_path, FileAccess.WRITE)
+	if file:
+		file.store_string(html)
+		file.close()
+		print("Code Quality: HTML report exported to %s" % export_path)
+		status_label.text = "Exported to code_quality_report.html"
+		OS.shell_open(ProjectSettings.globalize_path(export_path))
+	else:
+		push_error("Code Quality: Failed to write HTML report")
+		status_label.text = "HTML export failed!"
+
+
+func _generate_html_report() -> String:
+	var critical: Array = current_result.get_issues_by_severity(IssueScript.Severity.CRITICAL)
+	var warnings: Array = current_result.get_issues_by_severity(IssueScript.Severity.WARNING)
+	var info: Array = current_result.get_issues_by_severity(IssueScript.Severity.INFO)
+
+	# Collect types by severity for linked filtering
+	var types_by_severity: Dictionary = {
+		"all": {},
+		"critical": {},
+		"warning": {},
+		"info": {}
+	}
+	for issue in current_result.issues:
+		types_by_severity["all"][issue.check_id] = true
+	for issue in critical:
+		types_by_severity["critical"][issue.check_id] = true
+	for issue in warnings:
+		types_by_severity["warning"][issue.check_id] = true
+	for issue in info:
+		types_by_severity["info"][issue.check_id] = true
+
+	# Build type name mapping for JS
+	var type_names_json := "{"
+	var first := true
+	for check_id in types_by_severity["all"].keys():
+		if not first:
+			type_names_json += ","
+		first = false
+		var display_name: String = ISSUE_TYPES.get(check_id, check_id)
+		type_names_json += "\"%s\":\"%s\"" % [check_id, display_name]
+	type_names_json += "}"
+
+	# Build severity->types mapping for JS
+	var severity_types_json := "{"
+	for sev in ["all", "critical", "warning", "info"]:
+		if sev != "all":
+			severity_types_json += ","
+		var types_arr: Array = types_by_severity[sev].keys()
+		types_arr.sort()
+		severity_types_json += "\"%s\":%s" % [sev, JSON.stringify(types_arr)]
+	severity_types_json += "}"
+
+	var html := """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Godot Qube - Code Quality Report</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #eee; padding: 20px; line-height: 1.6; }
+.container { max-width: 1200px; margin: 0 auto; }
+h1 { color: #00d4ff; margin-bottom: 10px; }
+h2 { color: #888; font-size: 1.2em; margin: 20px 0 10px; border-bottom: 1px solid #333; padding-bottom: 5px; }
+.header { text-align: center; margin-bottom: 30px; }
+.subtitle { color: #888; font-size: 0.9em; }
+.filters { background: #16213e; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 15px; align-items: center; }
+.filters label { color: #aaa; font-size: 0.95em; font-weight: bold; }
+.filters select, .filters input { background: #0f3460; border: 1px solid #333; color: #eee; padding: 8px 12px; border-radius: 4px; font-size: 0.9em; }
+.filters input { min-width: 200px; }
+.filters select:focus, .filters input:focus { outline: none; border-color: #00d4ff; }
+.filter-count { color: #00d4ff; font-weight: bold; margin-left: auto; }
+.summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 30px; }
+.stat-card { background: #16213e; border-radius: 8px; padding: 15px; text-align: center; }
+.stat-card .value { font-size: 2em; font-weight: bold; }
+.stat-card .label { color: #888; font-size: 0.85em; }
+.stat-card.critical .value { color: #ff6b6b; }
+.stat-card.warning .value { color: #ffd93d; }
+.stat-card.info .value { color: #6bcb77; }
+.issues-section { margin-bottom: 30px; }
+.section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+.section-header .icon { font-size: 1.5em; }
+.section-header.critical { color: #ff6b6b; }
+.section-header.warning { color: #ffd93d; }
+.section-header.info { color: #6bcb77; }
+.section-header .count { font-size: 0.8em; color: #888; }
+.issue { background: #16213e; border-radius: 6px; padding: 12px 15px; margin-bottom: 8px; display: flex; flex-wrap: wrap; gap: 10px; }
+.issue.hidden { display: none; }
+.issue .location { font-family: 'Consolas', 'Monaco', monospace; font-size: 0.85em; color: #00d4ff; min-width: 300px; word-break: break-all; }
+.issue .message { flex: 1; color: #ccc; }
+.issue .check-id { font-size: 0.75em; background: #0f3460; padding: 2px 8px; border-radius: 4px; color: #888; }
+.footer { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #333; color: #666; font-size: 0.85em; }
+.footer a { color: #00d4ff; text-decoration: none; }
+.no-results { text-align: center; color: #666; padding: 40px; }
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+<h1>🔷 Godot Qube</h1>
+<p class="subtitle">Code Quality Report</p>
+</div>
+
+<div class="summary">
+<div class="stat-card"><div class="value">%d</div><div class="label">Files Analyzed</div></div>
+<div class="stat-card"><div class="value">%d</div><div class="label">Lines of Code</div></div>
+<div class="stat-card critical"><div class="value">%d</div><div class="label">Critical Issues</div></div>
+<div class="stat-card warning"><div class="value">%d</div><div class="label">Warnings</div></div>
+<div class="stat-card info"><div class="value">%d</div><div class="label">Info</div></div>
+<div class="stat-card"><div class="value">%d</div><div class="label">Debt Score</div></div>
+</div>
+
+<div class="filters">
+<label>Severity:</label>
+<select id="severityFilter" onchange="onSeverityChange()">
+<option value="all">All Severities</option>
+<option value="critical">Critical</option>
+<option value="warning">Warning</option>
+<option value="info">Info</option>
+</select>
+<label>Type:</label>
+<select id="typeFilter" onchange="applyFilters()">
+<option value="all">All Types</option>
+</select>
+<label>File:</label>
+<input type="text" id="fileFilter" placeholder="Filter by filename..." oninput="applyFilters()">
+<span class="filter-count" id="filterCount"></span>
+</div>
+
+<div id="issuesContainer">
+""" % [current_result.files_analyzed, current_result.total_lines, critical.size(), warnings.size(), info.size(), current_result.get_total_debt_score()]
+
+	if critical.size() > 0:
+		html += "<div class=\"issues-section\" data-severity=\"critical\"><div class=\"section-header critical\"><span class=\"icon\">🔴</span><h2>Critical Issues (<span class=\"count\">%d</span>)</h2></div>\n" % critical.size()
+		for issue in critical:
+			html += _format_html_issue(issue, "critical")
+		html += "</div>\n"
+
+	if warnings.size() > 0:
+		html += "<div class=\"issues-section\" data-severity=\"warning\"><div class=\"section-header warning\"><span class=\"icon\">🟡</span><h2>Warnings (<span class=\"count\">%d</span>)</h2></div>\n" % warnings.size()
+		for issue in warnings:
+			html += _format_html_issue(issue, "warning")
+		html += "</div>\n"
+
+	if info.size() > 0:
+		html += "<div class=\"issues-section\" data-severity=\"info\"><div class=\"section-header info\"><span class=\"icon\">🔵</span><h2>Info (<span class=\"count\">%d</span>)</h2></div>\n" % info.size()
+		for issue in info:
+			html += _format_html_issue(issue, "info")
+		html += "</div>\n"
+
+	html += """</div>
+<div id="noResults" class="no-results" style="display:none;">No issues match the current filters</div>
+
+<div class="footer">
+<p>Generated by <a href="https://poplava.itch.io">Godot Qube</a> in %dms</p>
+</div>
+</div>
+
+<script>
+// Type name mapping and severity->types data for linked filtering
+const TYPE_NAMES = %s;
+const SEVERITY_TYPES = %s;
+
+function populateTypeFilter(severity) {
+	const typeFilter = document.getElementById('typeFilter');
+	const prevValue = typeFilter.value;
+
+	// Clear and rebuild options
+	typeFilter.innerHTML = '<option value="all">All Types</option>';
+
+	const types = SEVERITY_TYPES[severity] || [];
+	types.forEach(checkId => {
+		const option = document.createElement('option');
+		option.value = checkId;
+		option.textContent = TYPE_NAMES[checkId] || checkId;
+		typeFilter.appendChild(option);
+	});
+
+	// Try to restore previous selection if it still exists
+	const options = Array.from(typeFilter.options);
+	const found = options.find(opt => opt.value === prevValue);
+	if (found) {
+		typeFilter.value = prevValue;
+	} else {
+		typeFilter.value = 'all';
+	}
+}
+
+function onSeverityChange() {
+	const severity = document.getElementById('severityFilter').value;
+	populateTypeFilter(severity);
+	applyFilters();
+}
+
+function applyFilters() {
+	const severity = document.getElementById('severityFilter').value;
+	const type = document.getElementById('typeFilter').value;
+	const file = document.getElementById('fileFilter').value.toLowerCase();
+
+	const issues = document.querySelectorAll('.issue');
+	let visibleCount = 0;
+
+	issues.forEach(issue => {
+		const issueSeverity = issue.dataset.severity;
+		const issueType = issue.dataset.type;
+		const issueFile = issue.dataset.file.toLowerCase();
+
+		const matchSeverity = severity === 'all' || issueSeverity === severity;
+		const matchType = type === 'all' || issueType === type;
+		const matchFile = file === '' || issueFile.includes(file);
+
+		if (matchSeverity && matchType && matchFile) {
+			issue.classList.remove('hidden');
+			visibleCount++;
+		} else {
+			issue.classList.add('hidden');
+		}
+	});
+
+	// Update section visibility and counts
+	document.querySelectorAll('.issues-section').forEach(section => {
+		const visibleInSection = section.querySelectorAll('.issue:not(.hidden)').length;
+		section.querySelector('.count').textContent = visibleInSection;
+		section.style.display = visibleInSection > 0 ? 'block' : 'none';
+	});
+
+	// Show/hide no results message
+	document.getElementById('noResults').style.display = visibleCount === 0 ? 'block' : 'none';
+
+	// Update filter count
+	const total = issues.length;
+	document.getElementById('filterCount').textContent = visibleCount === total ? '' : visibleCount + ' / ' + total + ' shown';
+}
+
+// Initialize
+populateTypeFilter('all');
+applyFilters();
+</script>
+</body>
+</html>
+""" % [current_result.analysis_time_ms, type_names_json, severity_types_json]
+
+	return html
+
+
+func _format_html_issue(issue, severity: String) -> String:
+	var escaped_message: String = issue.message.replace("<", "&lt;").replace(">", "&gt;")
+	var escaped_path: String = issue.file_path.replace("\\", "/")
+	return "<div class=\"issue\" data-severity=\"%s\" data-type=\"%s\" data-file=\"%s\"><span class=\"location\">%s:%d</span><span class=\"message\">%s</span><span class=\"check-id\">%s</span></div>\n" % [severity, issue.check_id, escaped_path, escaped_path, issue.line, escaped_message, issue.check_id]
+
+
 func _on_severity_filter_changed(index: int) -> void:
 	match index:
 		0: current_severity_filter = "all"
@@ -244,6 +555,25 @@ func _on_severity_filter_changed(index: int) -> void:
 		3: current_severity_filter = "info"
 
 	if current_result:
+		# Remember current type selection
+		var prev_type := current_type_filter
+
+		# Repopulate type filter based on new severity
+		_populate_type_filter(current_severity_filter)
+
+		# Try to restore previous type selection, or reset to "all"
+		var restored := false
+		for i in range(type_filter.item_count):
+			if type_filter.get_item_metadata(i) == prev_type:
+				type_filter.select(i)
+				current_type_filter = prev_type
+				restored = true
+				break
+
+		if not restored:
+			type_filter.select(0)
+			current_type_filter = "all"
+
 		_display_results()
 
 

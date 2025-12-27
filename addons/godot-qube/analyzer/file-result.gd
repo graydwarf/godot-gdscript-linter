@@ -1,4 +1,6 @@
-class_name FileResult
+# Godot Qube - Code quality analyzer for GDScript
+# https://poplava.itch.io
+class_name QubeFileResult
 extends RefCounted
 ## Holds analysis results for a single file
 

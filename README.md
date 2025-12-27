@@ -27,9 +27,19 @@ A static code analysis plugin for GDScript that helps you maintain code quality,
 - Bottom panel dock with full analysis results
 - Clickable file:line links to navigate directly to issues
 - Filter by severity (Critical/Warning/Info)
-- Filter by issue type
+- Filter by issue type (linked to severity selection)
+- Filter by filename
 - Configurable thresholds via settings panel
 - Real-time debt score calculation
+- Export to JSON or interactive HTML report
+
+### HTML Reports
+
+- Self-contained dark-themed HTML file
+- Interactive filtering by severity, type, and filename
+- Linked filters: type dropdown updates based on selected severity
+- Summary stats with issue counts and debt score
+- Opens automatically in your default browser
 
 ### CLI Support
 

@@ -1,2 +1,3 @@
-# Exclude screenshots from zip/tarball downloads (Asset Library)
+# Exclude from zip/tarball downloads (Asset Library)
 screenshots/ export-ignore
+icon.svg export-ignore

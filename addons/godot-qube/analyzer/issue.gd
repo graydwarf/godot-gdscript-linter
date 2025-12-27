@@ -12,7 +12,6 @@ var check_id: String       ## "long-function", "todo-comment", etc.
 var message: String        ## Human-readable description
 var context: String        ## The offending line/code snippet (optional)
 
-
 static func create(p_file: String, p_line: int, p_severity: Severity, p_check_id: String, p_message: String):
 	var issue = load("res://addons/godot-qube/analyzer/issue.gd").new()
 	issue.file_path = p_file
@@ -24,16 +23,13 @@ static func create(p_file: String, p_line: int, p_severity: Severity, p_check_id
 	issue.context = ""
 	return issue
 
-
 # Returns "res://path/file.gd:42"
 func get_location_string() -> String:
 	return "%s:%d" % [file_path, line]
 
-
 # Returns format that Godot Output panel auto-links
 func get_clickable_format() -> String:
 	return "%s:%d: %s" % [file_path, line, message]
-
 
 func get_severity_string() -> String:
 	match severity:
@@ -41,13 +37,11 @@ func get_severity_string() -> String:
 		Severity.WARNING: return "warning"
 		_: return "info"
 
-
 func get_severity_icon() -> String:
 	match severity:
 		Severity.CRITICAL: return "🔴"
 		Severity.WARNING: return "🟡"
 		_: return "🔵"
-
 
 func to_dict() -> Dictionary:
 	return {

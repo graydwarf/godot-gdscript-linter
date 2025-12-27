@@ -1,74 +1,192 @@
 # Godot Qube
 
-A code quality analyzer plugin for GDScript with clickable issue navigation.
+A static code analysis plugin for GDScript that helps you maintain code quality, identify technical debt, and enforce best practices in your Godot 4.x projects.
 
 ## Features
 
-- **Static Analysis**: Analyzes GDScript files for code quality issues
-- **Clickable Navigation**: Click on issues to jump directly to the problematic code
-- **Severity Levels**: Issues categorized as Critical, Warning, or Info
-- **Configurable Thresholds**: Customize limits for file length, function length, complexity, etc.
-- **Export to JSON**: Export full analysis results for CI integration or external tools
-- **Filename Filter**: Filter results by filename to focus on specific areas
+### Code Quality Checks
 
-## Checks Included
+| Check | Severity | Description |
+|-------|----------|-------------|
+| **File Length** | Warning/Critical | Files exceeding soft/hard line limits |
+| **Function Length** | Warning/Critical | Functions that are too long |
+| **Cyclomatic Complexity** | Warning/Critical | Functions with too many decision paths |
+| **Parameter Count** | Warning | Functions with too many parameters |
+| **Nesting Depth** | Warning | Deeply nested code blocks |
+| **TODO/FIXME Comments** | Info/Warning | Tracks technical debt markers |
+| **Print Statements** | Warning | Debug prints left in code |
+| **Empty Functions** | Info | Functions with no implementation |
+| **Magic Numbers** | Info | Hardcoded numbers that should be constants |
+| **Commented-Out Code** | Info | Dead code left in comments |
+| **Missing Type Hints** | Info | Variables and functions without type annotations |
+| **God Classes** | Warning | Classes with too many public functions or signals |
 
-### Critical Issues
-- File length exceeds 300 lines
-- Function exceeds 60 lines
-- Cyclomatic complexity > 15
+### Editor Integration
 
-### Warnings
-- File length exceeds 200 lines
-- Function exceeds 30 lines
-- Function has > 4 parameters
-- Nesting depth > 3 levels
-- Cyclomatic complexity > 10
-- TODO/FIXME/HACK comments
-- Debug print statements
-- God class detection (> 20 public functions or > 10 signals)
+- Bottom panel dock with full analysis results
+- Clickable file:line links to navigate directly to issues
+- Filter by severity (Critical/Warning/Info)
+- Filter by issue type
+- Configurable thresholds via settings panel
+- Real-time debt score calculation
 
-### Info
-- Long lines (> 120 chars)
-- Empty functions
-- Magic numbers
-- Commented-out code
-- Missing type hints
+### CLI Support
 
-## Installation
+Run analysis from command line for CI/CD integration:
 
-### As a Plugin (Recommended)
-1. Copy `addons/godot-qube/` to your project's `addons/` folder
-2. Enable the plugin in Project Settings → Plugins
-3. Click "Godot Qube" in the bottom panel
-
-### CLI Usage
 ```bash
-godot --headless --script res://addons/godot-qube/analyzer/analyze-cli.gd -- --clickable
+# Analyze current project
+godot --headless --script res://addons/godot-qube/analyzer/analyze-cli.gd
+
+# Analyze external project
+godot --headless --path /path/to/godot-qube --script res://addons/godot-qube/analyzer/analyze-cli.gd -- --path "C:/my/project"
+
+# Output formats
+godot --headless --script res://addons/godot-qube/analyzer/analyze-cli.gd -- --clickable  # Godot Output panel format
+godot --headless --script res://addons/godot-qube/analyzer/analyze-cli.gd -- --json       # JSON format
 ```
 
-Options:
-- `--path <dir>` - Analyze a different project
-- `--json` - Output as JSON
-- `--clickable` - Use Godot Output panel clickable format
-- `--help` - Show help
-
-## Configuration
-
-Edit `addons/godot-qube/analyzer/analysis-config.gd` to customize:
-- Line limits (soft/hard)
-- Function limits
-- Complexity thresholds
-- Excluded paths
-- Allowed magic numbers
-- TODO patterns
-
-## Exit Codes (for CI)
-
+**Exit Codes:**
 - `0` - No issues found
 - `1` - Warnings only
 - `2` - Critical issues found
 
+## Installation
+
+### From Asset Library
+
+1. Open Godot Editor
+2. Go to AssetLib tab
+3. Search for "Godot Qube"
+4. Download and install
+5. Enable plugin: Project > Project Settings > Plugins > Godot Qube > Enable
+
+### Manual Installation
+
+1. Download or clone this repository
+2. Copy the `addons/godot-qube` folder to your project's `addons/` directory
+3. Enable plugin: Project > Project Settings > Plugins > Godot Qube > Enable
+
+## Usage
+
+### Editor Dock
+
+1. After enabling the plugin, find "Code Quality" in the bottom panel
+2. Click "Scan" to analyze your codebase
+3. Click any issue to navigate to the source location
+4. Use filters to focus on specific severity levels or issue types
+5. Click the settings icon to adjust thresholds
+
+### Inline Ignore Comments
+
+Suppress specific warnings with inline comments:
+
+```gdscript
+# Ignore the next line
+# qube:ignore-next-line
+var magic = 42
+
+# Ignore on same line
+var another_magic = 100  # qube:ignore
+
+# Ignore specific check
+var debug_print = true  # qube:ignore:magic-number
+```
+
+### Project Configuration
+
+Create a `.gdqube.cfg` file in your project root to customize settings:
+
+```ini
+[limits]
+file_lines_soft = 200
+file_lines_hard = 300
+function_lines = 30
+function_lines_critical = 60
+max_parameters = 4
+max_nesting = 3
+cyclomatic_warning = 10
+cyclomatic_critical = 15
+
+[checks]
+file_length = true
+function_length = true
+cyclomatic_complexity = true
+parameters = true
+nesting = true
+todo_comments = true
+print_statements = true
+empty_functions = true
+magic_numbers = true
+commented_code = true
+missing_types = true
+god_class = true
+
+[exclude]
+paths = addons/, .godot/, tests/mocks/
+```
+
+## CI/CD Integration
+
+### GitHub Actions
+
+```yaml
+name: Code Quality
+
+on: [push, pull_request]
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Godot
+        run: |
+          wget -q https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip
+          unzip -q Godot_v4.5-stable_linux.x86_64.zip
+          chmod +x Godot_v4.5-stable_linux.x86_64
+
+      - name: Run Code Analysis
+        run: |
+          ./Godot_v4.5-stable_linux.x86_64 --headless --path . --script res://addons/godot-qube/analyzer/analyze-cli.gd -- --clickable
+```
+
+## Default Thresholds
+
+| Setting | Soft/Warning | Hard/Critical |
+|---------|--------------|---------------|
+| File lines | 200 | 300 |
+| Function lines | 30 | 60 |
+| Cyclomatic complexity | 10 | 15 |
+| Max parameters | 4 | - |
+| Max nesting depth | 3 | - |
+| God class functions | 20 | - |
+| God class signals | 10 | - |
+
+## Allowed Magic Numbers
+
+These numbers are not flagged as they are commonly self-explanatory:
+`0, 1, -1, 2, 0.0, 1.0, 0.5, 2.0, -1.0, 10, 60, 90, 100, 180, 255, 360`
+
+## Requirements
+
+- Godot 4.5+
+- GDScript only (no C# support)
+
 ## License
 
-MIT License
+MIT License - see [LICENSE](LICENSE) file for details.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit issues and pull requests.
+
+## Roadmap
+
+- [ ] Unused variable detection
+- [ ] Auto-fix for simple issues
+- [ ] Naming convention enforcement
+- [ ] HTML report export
+- [ ] Incremental analysis (caching)
+- [ ] Duplicate code detection

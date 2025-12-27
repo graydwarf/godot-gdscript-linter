@@ -17,12 +17,10 @@ var _target_path: String = "res://"
 var _output_format: String = "console"  # "console", "json", "clickable"
 var _exit_code: int = 0
 
-
 func _init() -> void:
 	_parse_arguments()
 	_run_analysis()
 	quit(_exit_code)
-
 
 func _parse_arguments() -> void:
 	var args := OS.get_cmdline_user_args()
@@ -51,7 +49,6 @@ func _parse_arguments() -> void:
 
 		i += 1
 
-
 func _print_help() -> void:
 	print("")
 	print("Godot Qube - Code Quality Analyzer for GDScript")
@@ -72,7 +69,6 @@ func _print_help() -> void:
 	print("  2 = Critical issues found")
 	print("")
 
-
 func _run_analysis() -> void:
 	var config = AnalysisConfigClass.get_default()
 	var analyzer = CodeAnalyzerClass.new(config)
@@ -89,10 +85,8 @@ func _run_analysis() -> void:
 
 	_exit_code = result.get_exit_code()
 
-
 func _output_json(result) -> void:
 	print(JSON.stringify(result.to_dict(), "\t"))
-
 
 func _output_clickable(result) -> void:
 	# Format that Godot Output panel makes clickable
@@ -127,7 +121,6 @@ func _output_clickable(result) -> void:
 		print("")
 
 	print("Debt Score: %d | Time: %dms" % [result.get_total_debt_score(), result.analysis_time_ms])
-
 
 func _output_console(result) -> void:
 	print("")

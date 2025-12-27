@@ -9,17 +9,14 @@ var functions: Array[Dictionary] = []
 var signals_found: Array[String] = []
 var dependencies: Array[String] = []
 
-
 static func create(path: String, lines: int):
 	var result = load("res://addons/godot-qube/analyzer/file-result.gd").new()
 	result.file_path = path
 	result.line_count = lines
 	return result
 
-
 func add_function(func_data: Dictionary) -> void:
 	functions.append(func_data)
-
 
 func to_dict() -> Dictionary:
 	return {

@@ -63,9 +63,82 @@ var commented_code_patterns: Array[String] = [
 	"#.connect(", "#.emit(", "#await ", "#preload(", "#load("
 ]
 
-
 static func get_default():
-	return load("res://addons/godot-qube/analyzer/analysis-config.gd").new()
+	var config = load("res://addons/godot-qube/analyzer/analysis-config.gd").new()
+	config.load_project_config()
+	return config
+
+
+# Load settings from .gdqube.cfg if it exists in project root
+func load_project_config(project_path: String = "res://") -> void:
+	var config_path := project_path.path_join(".gdqube.cfg")
+	if not FileAccess.file_exists(config_path):
+		return
+
+	var file := FileAccess.open(config_path, FileAccess.READ)
+	if not file:
+		return
+
+	var current_section := ""
+	while not file.eof_reached():
+		var line := file.get_line().strip_edges()
+
+		# Skip empty lines and comments
+		if line.is_empty() or line.begins_with("#") or line.begins_with(";"):
+			continue
+
+		# Section header
+		if line.begins_with("[") and line.ends_with("]"):
+			current_section = line.substr(1, line.length() - 2).to_lower()
+			continue
+
+		# Key-value pair
+		var eq_pos := line.find("=")
+		if eq_pos > 0:
+			var key := line.substr(0, eq_pos).strip_edges().to_lower()
+			var value := line.substr(eq_pos + 1).strip_edges()
+			_apply_config_value(current_section, key, value)
+
+
+func _apply_config_value(section: String, key: String, value: String) -> void:
+	match section:
+		"limits":
+			match key:
+				"file_lines_soft": line_limit_soft = int(value)
+				"file_lines_hard": line_limit_hard = int(value)
+				"function_lines": function_line_limit = int(value)
+				"function_lines_critical": function_line_critical = int(value)
+				"max_parameters": max_parameters = int(value)
+				"max_nesting": max_nesting = int(value)
+				"max_line_length": max_line_length = int(value)
+				"cyclomatic_warning": cyclomatic_warning = int(value)
+				"cyclomatic_critical": cyclomatic_critical = int(value)
+				"god_class_functions": god_class_functions = int(value)
+				"god_class_signals": god_class_signals = int(value)
+		"checks":
+			var enabled := value.to_lower() in ["true", "1", "yes", "on"]
+			match key:
+				"file_length": check_file_length = enabled
+				"function_length": check_function_length = enabled
+				"cyclomatic_complexity": check_cyclomatic_complexity = enabled
+				"parameters": check_parameters = enabled
+				"nesting": check_nesting = enabled
+				"todo_comments": check_todo_comments = enabled
+				"print_statements": check_print_statements = enabled
+				"empty_functions": check_empty_functions = enabled
+				"magic_numbers": check_magic_numbers = enabled
+				"commented_code": check_commented_code = enabled
+				"missing_types": check_missing_types = enabled
+				"god_class": check_god_class = enabled
+				"long_lines": check_long_lines = enabled
+		"exclude":
+			if key == "paths":
+				# Parse comma-separated list
+				excluded_paths.clear()
+				for path in value.split(","):
+					var trimmed := path.strip_edges()
+					if not trimmed.is_empty():
+						excluded_paths.append(trimmed)
 
 
 func is_path_excluded(path: String) -> bool:

@@ -13,16 +13,13 @@ var analysis_time_ms: int = 0
 # Per-file data for detailed reporting
 var file_results: Array = []
 
-
 func add_issue(issue) -> void:
 	issues.append(issue)
-
 
 func add_file_result(result) -> void:
 	file_results.append(result)
 	files_analyzed += 1
 	total_lines += result.line_count
-
 
 func get_issues_by_severity(severity: int) -> Array:
 	var filtered: Array = []
@@ -31,7 +28,6 @@ func get_issues_by_severity(severity: int) -> Array:
 			filtered.append(issue)
 	return filtered
 
-
 func get_issues_for_file(path: String) -> Array:
 	var filtered: Array = []
 	for issue in issues:
@@ -39,18 +35,14 @@ func get_issues_for_file(path: String) -> Array:
 			filtered.append(issue)
 	return filtered
 
-
 func get_critical_count() -> int:
 	return get_issues_by_severity(IssueClass.Severity.CRITICAL).size()
-
 
 func get_warning_count() -> int:
 	return get_issues_by_severity(IssueClass.Severity.WARNING).size()
 
-
 func get_info_count() -> int:
 	return get_issues_by_severity(IssueClass.Severity.INFO).size()
-
 
 func get_total_debt_score() -> int:
 	var score := 0
@@ -58,14 +50,12 @@ func get_total_debt_score() -> int:
 		score += file_result.debt_score
 	return score
 
-
 func get_exit_code() -> int:
 	if get_critical_count() > 0:
 		return 2
 	if get_warning_count() > 0:
 		return 1
 	return 0
-
 
 func to_dict() -> Dictionary:
 	var issues_array := []

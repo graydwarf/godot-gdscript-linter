@@ -44,7 +44,8 @@ var settings_panel: PanelContainer
 # Settings controls
 var show_issues_check: CheckBox
 var show_debt_check: CheckBox
-var show_export_check: CheckBox
+var show_json_export_check: CheckBox
+var show_html_export_check: CheckBox
 var max_lines_soft_spin: SpinBox
 var max_lines_hard_spin: SpinBox
 var max_func_lines_spin: SpinBox
@@ -59,7 +60,8 @@ var current_file_filter: String = ""
 # Settings (persisted via EditorSettings if available)
 var show_total_issues: bool = true
 var show_debt: bool = true
-var show_export_button: bool = false
+var show_json_export: bool = false
+var show_html_export: bool = true
 
 # Preload the analyzer scripts
 var CodeAnalyzerScript = preload("res://addons/godot-qube/analyzer/code-analyzer.gd")
@@ -89,7 +91,8 @@ func _ready() -> void:
 	# Get settings controls
 	show_issues_check = $VBox/SettingsPanel/Margin/SettingsVBox/DisplayGroup/ShowIssuesCheck
 	show_debt_check = $VBox/SettingsPanel/Margin/SettingsVBox/DisplayGroup/ShowDebtCheck
-	show_export_check = $VBox/SettingsPanel/Margin/SettingsVBox/DisplayGroup/ShowExportCheck
+	show_json_export_check = $VBox/SettingsPanel/Margin/SettingsVBox/DisplayGroup/ShowJSONExportCheck
+	show_html_export_check = $VBox/SettingsPanel/Margin/SettingsVBox/DisplayGroup/ShowHTMLExportCheck
 	max_lines_soft_spin = $VBox/SettingsPanel/Margin/SettingsVBox/LimitsGroup/MaxLinesSoftSpin
 	max_lines_hard_spin = $VBox/SettingsPanel/Margin/SettingsVBox/LimitsGroup/MaxLinesHardSpin
 	max_func_lines_spin = $VBox/SettingsPanel/Margin/SettingsVBox/LimitsGroup/MaxFuncLinesSpin
@@ -110,8 +113,10 @@ func _ready() -> void:
 		show_issues_check.toggled.connect(_on_show_issues_toggled)
 	if show_debt_check:
 		show_debt_check.toggled.connect(_on_show_debt_toggled)
-	if show_export_check:
-		show_export_check.toggled.connect(_on_show_export_toggled)
+	if show_json_export_check:
+		show_json_export_check.toggled.connect(_on_show_json_export_toggled)
+	if show_html_export_check:
+		show_html_export_check.toggled.connect(_on_show_html_export_toggled)
 	if max_lines_soft_spin:
 		max_lines_soft_spin.value_changed.connect(_on_max_lines_soft_changed)
 	if max_lines_hard_spin:
@@ -195,7 +200,8 @@ func _load_settings() -> void:
 	# Load display settings from EditorSettings
 	show_total_issues = editor_settings.get_setting("code_quality/display/show_issues") if editor_settings.has_setting("code_quality/display/show_issues") else true
 	show_debt = editor_settings.get_setting("code_quality/display/show_debt") if editor_settings.has_setting("code_quality/display/show_debt") else true
-	show_export_button = editor_settings.get_setting("code_quality/display/show_export") if editor_settings.has_setting("code_quality/display/show_export") else false
+	show_json_export = editor_settings.get_setting("code_quality/display/show_json_export") if editor_settings.has_setting("code_quality/display/show_json_export") else false
+	show_html_export = editor_settings.get_setting("code_quality/display/show_html_export") if editor_settings.has_setting("code_quality/display/show_html_export") else true
 
 	# Load analysis limits
 	current_config.line_limit_soft = editor_settings.get_setting("code_quality/limits/file_lines_warn") if editor_settings.has_setting("code_quality/limits/file_lines_warn") else 200
@@ -206,8 +212,10 @@ func _load_settings() -> void:
 	# Apply to UI
 	show_issues_check.button_pressed = show_total_issues
 	show_debt_check.button_pressed = show_debt
-	show_export_check.button_pressed = show_export_button
-	export_button.visible = show_export_button
+	show_json_export_check.button_pressed = show_json_export
+	show_html_export_check.button_pressed = show_html_export
+	export_button.visible = show_json_export
+	html_export_button.visible = show_html_export
 
 	max_lines_soft_spin.value = current_config.line_limit_soft
 	max_lines_hard_spin.value = current_config.line_limit_hard
@@ -587,10 +595,16 @@ func _on_show_debt_toggled(pressed: bool) -> void:
 		_display_results()
 
 
-func _on_show_export_toggled(pressed: bool) -> void:
-	show_export_button = pressed
-	_save_setting("code_quality/display/show_export", pressed)
+func _on_show_json_export_toggled(pressed: bool) -> void:
+	show_json_export = pressed
+	_save_setting("code_quality/display/show_json_export", pressed)
 	export_button.visible = pressed
+
+
+func _on_show_html_export_toggled(pressed: bool) -> void:
+	show_html_export = pressed
+	_save_setting("code_quality/display/show_html_export", pressed)
+	html_export_button.visible = pressed
 
 
 func _on_max_lines_soft_changed(value: float) -> void:

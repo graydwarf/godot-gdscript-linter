@@ -86,10 +86,14 @@ layout_mode = 2
 button_pressed = true
 text = "Show Debt"
 
-[node name="ShowExportCheck" type="CheckBox" parent="VBox/SettingsPanel/Margin/SettingsVBox/DisplayGroup"]
+[node name="ShowJSONExportCheck" type="CheckBox" parent="VBox/SettingsPanel/Margin/SettingsVBox/DisplayGroup"]
+layout_mode = 2
+text = "Show JSON Export"
+
+[node name="ShowHTMLExportCheck" type="CheckBox" parent="VBox/SettingsPanel/Margin/SettingsVBox/DisplayGroup"]
 layout_mode = 2
 button_pressed = true
-text = "Show Export"
+text = "Show HTML Export"
 
 [node name="Separator" type="HSeparator" parent="VBox/SettingsPanel/Margin/SettingsVBox"]
 layout_mode = 2

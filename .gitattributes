@@ -1,0 +1,2 @@
+# Exclude screenshots from zip/tarball downloads (Asset Library)
+screenshots/ export-ignore

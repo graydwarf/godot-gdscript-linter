@@ -2,6 +2,10 @@
 
 A static code analysis plugin for GDScript that helps you maintain code quality, identify technical debt, and enforce best practices in your Godot 4.x projects.
 
+<p align="center">
+  <img src="screenshots/godot-qube.png" width="700" alt="Godot Qube Editor Dock">
+</p>
+
 ## Features
 
 ### Code Quality Checks
@@ -40,6 +44,10 @@ A static code analysis plugin for GDScript that helps you maintain code quality,
 - Linked filters: type dropdown updates based on selected severity
 - Summary stats with issue counts and debt score
 - Opens automatically in your default browser
+
+<p align="center">
+  <img src="screenshots/godot-qube-html.png" width="700" alt="Godot Qube HTML Report">
+</p>
 
 ### CLI Support
 
@@ -176,6 +184,10 @@ jobs:
 | Max nesting depth | 3 | - |
 | God class functions | 20 | - |
 | God class signals | 10 | - |
+
+<p align="center">
+  <img src="screenshots/godot-qube-settings.png" width="500" alt="Godot Qube Settings Panel">
+</p>
 
 ## Allowed Magic Numbers
 

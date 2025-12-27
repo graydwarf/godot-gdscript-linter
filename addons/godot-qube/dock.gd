@@ -353,27 +353,18 @@ func _display_results() -> void:
 				info.append(issue)
 
 	if critical.size() > 0:
-		bbcode += "[color=#ff6b6b][b]CRITICAL (%d)[/b][/color]\n" % critical.size()
-		for issue in critical.slice(0, ISSUES_PER_CATEGORY):
-			bbcode += _format_issue(issue, "#ff6b6b")
-		if critical.size() > ISSUES_PER_CATEGORY:
-			bbcode += "[color=#888888]  ... and %d more (use filters or export JSON)[/color]\n" % (critical.size() - ISSUES_PER_CATEGORY)
+		bbcode += "[color=#ff6b6b][b]🔴 CRITICAL (%d)[/b][/color]\n" % critical.size()
+		bbcode += _format_issues_by_type(critical, "#ff6b6b")
 		bbcode += "\n"
 
 	if warnings.size() > 0:
-		bbcode += "[color=#ffd93d][b]WARNINGS (%d)[/b][/color]\n" % warnings.size()
-		for issue in warnings.slice(0, ISSUES_PER_CATEGORY):
-			bbcode += _format_issue(issue, "#ffd93d")
-		if warnings.size() > ISSUES_PER_CATEGORY:
-			bbcode += "[color=#888888]  ... and %d more (use filters or export JSON)[/color]\n" % (warnings.size() - ISSUES_PER_CATEGORY)
+		bbcode += "[color=#ffd93d][b]🟡 WARNINGS (%d)[/b][/color]\n" % warnings.size()
+		bbcode += _format_issues_by_type(warnings, "#ffd93d")
 		bbcode += "\n"
 
 	if info.size() > 0:
-		bbcode += "[color=#6bcb77][b]INFO (%d)[/b][/color]\n" % info.size()
-		for issue in info.slice(0, ISSUES_PER_CATEGORY):
-			bbcode += _format_issue(issue, "#6bcb77")
-		if info.size() > ISSUES_PER_CATEGORY:
-			bbcode += "[color=#888888]  ... and %d more (use filters or export JSON)[/color]\n" % (info.size() - ISSUES_PER_CATEGORY)
+		bbcode += "[color=#6bcb77][b]🔵 INFO (%d)[/b][/color]\n" % info.size()
+		bbcode += _format_issues_by_type(info, "#6bcb77")
 
 	if issues_to_show.size() == 0:
 		bbcode += "[color=#888888]No issues matching current filters[/color]"
@@ -381,13 +372,52 @@ func _display_results() -> void:
 	results_label.text = bbcode
 
 
+func _format_issues_by_type(issues: Array, color: String) -> String:
+	var bbcode := ""
+
+	# Group issues by check_id
+	var by_type: Dictionary = {}
+	for issue in issues:
+		var check_id: String = issue.check_id
+		if not by_type.has(check_id):
+			by_type[check_id] = []
+		by_type[check_id].append(issue)
+
+	# Sort types by count (most issues first)
+	var type_keys := by_type.keys()
+	type_keys.sort_custom(func(a, b): return by_type[a].size() > by_type[b].size())
+
+	var is_first_type := true
+	for check_id in type_keys:
+		var type_issues: Array = by_type[check_id]
+		var type_name: String = ISSUE_TYPES.get(check_id, check_id)
+
+		# Add blank line between type groups (except before first)
+		if not is_first_type:
+			bbcode += "\n"
+		is_first_type = false
+
+		# Type sub-heading
+		bbcode += "  [color=#aaaaaa]── %s (%d) ──[/color]\n" % [type_name, type_issues.size()]
+
+		# Show issues for this type (limited)
+		var shown := 0
+		for issue in type_issues:
+			if shown >= ISSUES_PER_CATEGORY:
+				bbcode += "  [color=#888888]  ... and %d more[/color]\n" % (type_issues.size() - shown)
+				break
+			bbcode += _format_issue(issue, color)
+			shown += 1
+
+	return bbcode
+
+
 func _format_issue(issue, color: String) -> String:
-	var icon: String = issue.get_severity_icon()
 	var short_path: String = issue.file_path.get_file()
 	var link := "%s:%d" % [issue.file_path, issue.line]
 
-	return "%s [url=%s][color=%s]%s:%d[/color][/url] %s\n" % [
-		icon, link, color, short_path, issue.line, issue.message
+	return "    [url=%s][color=%s]%s:%d[/color][/url] %s\n" % [
+		link, color, short_path, issue.line, issue.message
 	]
 
 

@@ -44,9 +44,9 @@ func get_severity_string() -> String:
 
 func get_severity_icon() -> String:
 	match severity:
-		Severity.CRITICAL: return "[!]"
-		Severity.WARNING: return "[~]"
-		_: return "[i]"
+		Severity.CRITICAL: return "🔴"
+		Severity.WARNING: return "🟡"
+		_: return "🔵"
 
 
 func to_dict() -> Dictionary:

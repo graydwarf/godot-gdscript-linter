@@ -305,7 +305,7 @@ h2 { color: #888; font-size: 1.2em; margin: 20px 0 10px; border-bottom: 1px soli
 .filters { background: #16213e; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 15px; align-items: center; }
 .filters label { color: #aaa; font-size: 0.95em; font-weight: bold; }
 .filters select, .filters input { background: #0f3460; border: 1px solid #333; color: #eee; padding: 8px 12px; border-radius: 4px; font-size: 0.9em; }
-.filters input { min-width: 200px; }
+.filters input { min-width: 400px; }
 .filters select:focus, .filters input:focus { outline: none; border-color: #00d4ff; }
 .filter-count { color: #00d4ff; font-weight: bold; margin-left: auto; }
 .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 30px; }

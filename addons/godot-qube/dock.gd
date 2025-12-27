@@ -50,6 +50,12 @@ var max_lines_soft_spin: SpinBox
 var max_lines_hard_spin: SpinBox
 var max_func_lines_spin: SpinBox
 var max_complexity_spin: SpinBox
+var func_lines_crit_spin: SpinBox
+var max_complexity_crit_spin: SpinBox
+var max_params_spin: SpinBox
+var max_nesting_spin: SpinBox
+var god_class_funcs_spin: SpinBox
+var god_class_signals_spin: SpinBox
 
 # State
 var current_result  # AnalysisResult instance
@@ -97,6 +103,12 @@ func _ready() -> void:
 	max_lines_hard_spin = $VBox/SettingsPanel/Margin/SettingsVBox/LimitsGroup/MaxLinesHardSpin
 	max_func_lines_spin = $VBox/SettingsPanel/Margin/SettingsVBox/LimitsGroup/MaxFuncLinesSpin
 	max_complexity_spin = $VBox/SettingsPanel/Margin/SettingsVBox/LimitsGroup/MaxComplexitySpin
+	func_lines_crit_spin = $VBox/SettingsPanel/Margin/SettingsVBox/LimitsGroup/FuncLinesCritSpin
+	max_complexity_crit_spin = $VBox/SettingsPanel/Margin/SettingsVBox/LimitsGroup/MaxComplexityCritSpin
+	max_params_spin = $VBox/SettingsPanel/Margin/SettingsVBox/LimitsGroup/MaxParamsSpin
+	max_nesting_spin = $VBox/SettingsPanel/Margin/SettingsVBox/LimitsGroup/MaxNestingSpin
+	god_class_funcs_spin = $VBox/SettingsPanel/Margin/SettingsVBox/LimitsGroup/GodClassFuncsSpin
+	god_class_signals_spin = $VBox/SettingsPanel/Margin/SettingsVBox/LimitsGroup/GodClassSignalsSpin
 
 	# Connect signals
 	results_label.meta_clicked.connect(_on_link_clicked)
@@ -125,6 +137,18 @@ func _ready() -> void:
 		max_func_lines_spin.value_changed.connect(_on_max_func_lines_changed)
 	if max_complexity_spin:
 		max_complexity_spin.value_changed.connect(_on_max_complexity_changed)
+	if func_lines_crit_spin:
+		func_lines_crit_spin.value_changed.connect(_on_func_lines_crit_changed)
+	if max_complexity_crit_spin:
+		max_complexity_crit_spin.value_changed.connect(_on_max_complexity_crit_changed)
+	if max_params_spin:
+		max_params_spin.value_changed.connect(_on_max_params_changed)
+	if max_nesting_spin:
+		max_nesting_spin.value_changed.connect(_on_max_nesting_changed)
+	if god_class_funcs_spin:
+		god_class_funcs_spin.value_changed.connect(_on_god_class_funcs_changed)
+	if god_class_signals_spin:
+		god_class_signals_spin.value_changed.connect(_on_god_class_signals_changed)
 
 	# Setup severity filter options
 	severity_filter.clear()
@@ -207,7 +231,13 @@ func _load_settings() -> void:
 	current_config.line_limit_soft = editor_settings.get_setting("code_quality/limits/file_lines_warn") if editor_settings.has_setting("code_quality/limits/file_lines_warn") else 200
 	current_config.line_limit_hard = editor_settings.get_setting("code_quality/limits/file_lines_critical") if editor_settings.has_setting("code_quality/limits/file_lines_critical") else 300
 	current_config.function_line_limit = editor_settings.get_setting("code_quality/limits/function_lines") if editor_settings.has_setting("code_quality/limits/function_lines") else 30
+	current_config.function_line_critical = editor_settings.get_setting("code_quality/limits/function_lines_crit") if editor_settings.has_setting("code_quality/limits/function_lines_crit") else 60
 	current_config.cyclomatic_warning = editor_settings.get_setting("code_quality/limits/complexity_warn") if editor_settings.has_setting("code_quality/limits/complexity_warn") else 10
+	current_config.cyclomatic_critical = editor_settings.get_setting("code_quality/limits/complexity_crit") if editor_settings.has_setting("code_quality/limits/complexity_crit") else 15
+	current_config.max_parameters = editor_settings.get_setting("code_quality/limits/max_params") if editor_settings.has_setting("code_quality/limits/max_params") else 4
+	current_config.max_nesting = editor_settings.get_setting("code_quality/limits/max_nesting") if editor_settings.has_setting("code_quality/limits/max_nesting") else 3
+	current_config.god_class_functions = editor_settings.get_setting("code_quality/limits/god_class_funcs") if editor_settings.has_setting("code_quality/limits/god_class_funcs") else 20
+	current_config.god_class_signals = editor_settings.get_setting("code_quality/limits/god_class_signals") if editor_settings.has_setting("code_quality/limits/god_class_signals") else 10
 
 	# Apply to UI
 	show_issues_check.button_pressed = show_total_issues
@@ -221,6 +251,12 @@ func _load_settings() -> void:
 	max_lines_hard_spin.value = current_config.line_limit_hard
 	max_func_lines_spin.value = current_config.function_line_limit
 	max_complexity_spin.value = current_config.cyclomatic_warning
+	func_lines_crit_spin.value = current_config.function_line_critical
+	max_complexity_crit_spin.value = current_config.cyclomatic_critical
+	max_params_spin.value = current_config.max_parameters
+	max_nesting_spin.value = current_config.max_nesting
+	god_class_funcs_spin.value = current_config.god_class_functions
+	god_class_signals_spin.value = current_config.god_class_signals
 
 
 func _save_setting(key: String, value: Variant) -> void:
@@ -625,6 +661,36 @@ func _on_max_func_lines_changed(value: float) -> void:
 func _on_max_complexity_changed(value: float) -> void:
 	current_config.cyclomatic_warning = int(value)
 	_save_setting("code_quality/limits/complexity_warn", int(value))
+
+
+func _on_func_lines_crit_changed(value: float) -> void:
+	current_config.function_line_critical = int(value)
+	_save_setting("code_quality/limits/function_lines_crit", int(value))
+
+
+func _on_max_complexity_crit_changed(value: float) -> void:
+	current_config.cyclomatic_critical = int(value)
+	_save_setting("code_quality/limits/complexity_crit", int(value))
+
+
+func _on_max_params_changed(value: float) -> void:
+	current_config.max_parameters = int(value)
+	_save_setting("code_quality/limits/max_params", int(value))
+
+
+func _on_max_nesting_changed(value: float) -> void:
+	current_config.max_nesting = int(value)
+	_save_setting("code_quality/limits/max_nesting", int(value))
+
+
+func _on_god_class_funcs_changed(value: float) -> void:
+	current_config.god_class_functions = int(value)
+	_save_setting("code_quality/limits/god_class_funcs", int(value))
+
+
+func _on_god_class_signals_changed(value: float) -> void:
+	current_config.god_class_signals = int(value)
+	_save_setting("code_quality/limits/god_class_signals", int(value))
 
 
 func _display_results() -> void:

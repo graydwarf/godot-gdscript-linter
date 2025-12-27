@@ -209,7 +209,8 @@ Contributions are welcome! Please feel free to submit issues and pull requests.
 
 ## Roadmap
 
-- [ ] Unused variable detection
-- [ ] Auto-fix for simple issues
-- [ ] Incremental analysis (caching)
-- [ ] Duplicate code detection
+Nothing planned. Waiting for feedback...
+
+---
+
+*This project was built with the assistance of [Claude Code](https://claude.ai/code), an AI coding assistant by Anthropic.*

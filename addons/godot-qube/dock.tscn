@@ -147,6 +147,66 @@ min_value = 5.0
 max_value = 50.0
 value = 10.0
 
+[node name="FuncLinesCritLabel" type="Label" parent="VBox/SettingsPanel/Margin/SettingsVBox/LimitsGroup"]
+layout_mode = 2
+text = "Func Lines (crit):"
+
+[node name="FuncLinesCritSpin" type="SpinBox" parent="VBox/SettingsPanel/Margin/SettingsVBox/LimitsGroup"]
+layout_mode = 2
+min_value = 20.0
+max_value = 300.0
+value = 60.0
+
+[node name="MaxComplexityCritLabel" type="Label" parent="VBox/SettingsPanel/Margin/SettingsVBox/LimitsGroup"]
+layout_mode = 2
+text = "Complexity (crit):"
+
+[node name="MaxComplexityCritSpin" type="SpinBox" parent="VBox/SettingsPanel/Margin/SettingsVBox/LimitsGroup"]
+layout_mode = 2
+min_value = 5.0
+max_value = 50.0
+value = 15.0
+
+[node name="MaxParamsLabel" type="Label" parent="VBox/SettingsPanel/Margin/SettingsVBox/LimitsGroup"]
+layout_mode = 2
+text = "Max Params:"
+
+[node name="MaxParamsSpin" type="SpinBox" parent="VBox/SettingsPanel/Margin/SettingsVBox/LimitsGroup"]
+layout_mode = 2
+min_value = 2.0
+max_value = 15.0
+value = 4.0
+
+[node name="MaxNestingLabel" type="Label" parent="VBox/SettingsPanel/Margin/SettingsVBox/LimitsGroup"]
+layout_mode = 2
+text = "Max Nesting:"
+
+[node name="MaxNestingSpin" type="SpinBox" parent="VBox/SettingsPanel/Margin/SettingsVBox/LimitsGroup"]
+layout_mode = 2
+min_value = 2.0
+max_value = 10.0
+value = 3.0
+
+[node name="GodClassFuncsLabel" type="Label" parent="VBox/SettingsPanel/Margin/SettingsVBox/LimitsGroup"]
+layout_mode = 2
+text = "God Class Funcs:"
+
+[node name="GodClassFuncsSpin" type="SpinBox" parent="VBox/SettingsPanel/Margin/SettingsVBox/LimitsGroup"]
+layout_mode = 2
+min_value = 5.0
+max_value = 50.0
+value = 20.0
+
+[node name="GodClassSignalsLabel" type="Label" parent="VBox/SettingsPanel/Margin/SettingsVBox/LimitsGroup"]
+layout_mode = 2
+text = "God Class Signals:"
+
+[node name="GodClassSignalsSpin" type="SpinBox" parent="VBox/SettingsPanel/Margin/SettingsVBox/LimitsGroup"]
+layout_mode = 2
+min_value = 3.0
+max_value = 30.0
+value = 10.0
+
 [node name="ScrollContainer" type="ScrollContainer" parent="VBox"]
 layout_mode = 2
 size_flags_vertical = 3

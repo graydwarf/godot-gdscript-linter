@@ -10,8 +10,8 @@ var signals_found: Array[String] = []
 var dependencies: Array[String] = []
 
 
-static func create(path: String, lines: int) -> FileResult:
-	var result := FileResult.new()
+static func create(path: String, lines: int):
+	var result = load("res://addons/godot-qube/analyzer/file-result.gd").new()
 	result.file_path = path
 	result.line_count = lines
 	return result

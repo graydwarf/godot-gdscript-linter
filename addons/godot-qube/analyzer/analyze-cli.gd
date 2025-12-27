@@ -7,6 +7,12 @@ extends SceneTree
 ##   -- --format json                  Output as JSON (default: console)
 ##   -- --clickable                    Use Godot Output panel clickable format
 
+const AnalysisConfigClass = preload("res://addons/godot-qube/analyzer/analysis-config.gd")
+const CodeAnalyzerClass = preload("res://addons/godot-qube/analyzer/code-analyzer.gd")
+const AnalysisResultClass = preload("res://addons/godot-qube/analyzer/analysis-result.gd")
+const FileResultClass = preload("res://addons/godot-qube/analyzer/file-result.gd")
+const IssueClass = preload("res://addons/godot-qube/analyzer/issue.gd")
+
 var _target_path: String = "res://"
 var _output_format: String = "console"  # "console", "json", "clickable"
 var _exit_code: int = 0
@@ -68,10 +74,10 @@ func _print_help() -> void:
 
 
 func _run_analysis() -> void:
-	var config := AnalysisConfig.get_default()
-	var analyzer := CodeAnalyzer.new(config)
+	var config = AnalysisConfigClass.get_default()
+	var analyzer = CodeAnalyzerClass.new(config)
 
-	var result := analyzer.analyze_directory(_target_path)
+	var result = analyzer.analyze_directory(_target_path)
 
 	match _output_format:
 		"json":
@@ -84,11 +90,11 @@ func _run_analysis() -> void:
 	_exit_code = result.get_exit_code()
 
 
-func _output_json(result: AnalysisResult) -> void:
+func _output_json(result) -> void:
 	print(JSON.stringify(result.to_dict(), "\t"))
 
 
-func _output_clickable(result: AnalysisResult) -> void:
+func _output_clickable(result) -> void:
 	# Format that Godot Output panel makes clickable
 	print("")
 	print("=== Code Analysis Results ===")
@@ -98,9 +104,9 @@ func _output_clickable(result: AnalysisResult) -> void:
 	print("")
 
 	# Group by severity
-	var critical := result.get_issues_by_severity(Issue.Severity.CRITICAL)
-	var warnings := result.get_issues_by_severity(Issue.Severity.WARNING)
-	var info := result.get_issues_by_severity(Issue.Severity.INFO)
+	var critical: Array = result.get_issues_by_severity(IssueClass.Severity.CRITICAL)
+	var warnings: Array = result.get_issues_by_severity(IssueClass.Severity.WARNING)
+	var info: Array = result.get_issues_by_severity(IssueClass.Severity.INFO)
 
 	if critical.size() > 0:
 		print("--- CRITICAL (%d) ---" % critical.size())
@@ -123,7 +129,7 @@ func _output_clickable(result: AnalysisResult) -> void:
 	print("Debt Score: %d | Time: %dms" % [result.get_total_debt_score(), result.analysis_time_ms])
 
 
-func _output_console(result: AnalysisResult) -> void:
+func _output_console(result) -> void:
 	print("")
 	print("=" .repeat(60))
 	print("GODOT QUBE - CODE QUALITY REPORT")
@@ -148,7 +154,7 @@ func _output_console(result: AnalysisResult) -> void:
 	var by_size: Array = result.file_results.duplicate()
 	by_size.sort_custom(func(a, b): return a.line_count > b.line_count)
 	for i in range(mini(10, by_size.size())):
-		var f: FileResult = by_size[i]
+		var f = by_size[i]
 		print("%4d lines | %s" % [f.line_count, f.file_path])
 	print("")
 
@@ -158,14 +164,14 @@ func _output_console(result: AnalysisResult) -> void:
 	var by_debt: Array = result.file_results.duplicate()
 	by_debt.sort_custom(func(a, b): return a.debt_score > b.debt_score)
 	for i in range(mini(10, by_debt.size())):
-		var f: FileResult = by_debt[i]
+		var f = by_debt[i]
 		if f.debt_score == 0:
 			break
 		print("Score %3d | %4d lines | %s" % [f.debt_score, f.line_count, f.file_path])
 	print("")
 
 	# Critical issues
-	var critical := result.get_issues_by_severity(Issue.Severity.CRITICAL)
+	var critical: Array = result.get_issues_by_severity(IssueClass.Severity.CRITICAL)
 	if critical.size() > 0:
 		print("CRITICAL ISSUES (Fix Immediately)")
 		print("-" .repeat(40))
@@ -176,20 +182,20 @@ func _output_console(result: AnalysisResult) -> void:
 	# Long functions
 	print("LONG FUNCTIONS")
 	print("-" .repeat(40))
-	var long_func_issues := result.issues.filter(func(i): return i.check_id == "long-function")
+	var long_func_issues: Array = result.issues.filter(func(i): return i.check_id == "long-function")
 	long_func_issues.sort_custom(func(a, b): return a.severity > b.severity)
 	for i in range(mini(15, long_func_issues.size())):
-		var issue: Issue = long_func_issues[i]
+		var issue = long_func_issues[i]
 		print("  %s" % issue.get_clickable_format())
 	print("")
 
 	# TODO/FIXME summary
-	var todo_issues := result.issues.filter(func(i): return i.check_id == "todo-comment")
+	var todo_issues: Array = result.issues.filter(func(i): return i.check_id == "todo-comment")
 	if todo_issues.size() > 0:
 		print("TODO/FIXME COMMENTS (%d total)" % todo_issues.size())
 		print("-" .repeat(40))
 		for i in range(mini(10, todo_issues.size())):
-			var issue: Issue = todo_issues[i]
+			var issue = todo_issues[i]
 			print("  %s" % issue.get_clickable_format())
 		if todo_issues.size() > 10:
 			print("  ... and %d more" % (todo_issues.size() - 10))

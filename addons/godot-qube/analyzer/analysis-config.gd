@@ -64,8 +64,8 @@ var commented_code_patterns: Array[String] = [
 ]
 
 
-static func get_default() -> AnalysisConfig:
-	return AnalysisConfig.new()
+static func get_default():
+	return load("res://addons/godot-qube/analyzer/analysis-config.gd").new()
 
 
 func is_path_excluded(path: String) -> bool:

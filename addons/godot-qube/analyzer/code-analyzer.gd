@@ -2,17 +2,22 @@ class_name CodeAnalyzer
 extends RefCounted
 ## Core code analysis engine - reusable by CLI, plugin, or external tools
 
-var config: AnalysisConfig
-var result: AnalysisResult
+const AnalysisConfigClass = preload("res://addons/godot-qube/analyzer/analysis-config.gd")
+const AnalysisResultClass = preload("res://addons/godot-qube/analyzer/analysis-result.gd")
+const FileResultClass = preload("res://addons/godot-qube/analyzer/file-result.gd")
+const IssueClass = preload("res://addons/godot-qube/analyzer/issue.gd")
+
+var config
+var result
 var _start_time: int
 
 
-func _init(p_config: AnalysisConfig = null) -> void:
-	config = p_config if p_config else AnalysisConfig.get_default()
+func _init(p_config = null) -> void:
+	config = p_config if p_config else AnalysisConfigClass.get_default()
 
 
-func analyze_directory(path: String) -> AnalysisResult:
-	result = AnalysisResult.new()
+func analyze_directory(path: String):
+	result = AnalysisResultClass.new()
 	_start_time = Time.get_ticks_msec()
 
 	_scan_directory(path)
@@ -21,7 +26,7 @@ func analyze_directory(path: String) -> AnalysisResult:
 	return result
 
 
-func analyze_file(file_path: String) -> FileResult:
+func analyze_file(file_path: String):
 	var file := FileAccess.open(file_path, FileAccess.READ)
 	if not file:
 		push_error("Failed to open file: %s" % file_path)
@@ -31,9 +36,9 @@ func analyze_file(file_path: String) -> FileResult:
 	return analyze_content(content, file_path)
 
 
-func analyze_content(content: String, file_path: String) -> FileResult:
+func analyze_content(content: String, file_path: String):
 	var lines := content.split("\n")
-	var file_result := FileResult.create(file_path, lines.size())
+	var file_result = FileResultClass.create(file_path, lines.size())
 
 	_analyze_file_level(lines, file_path, file_result)
 	_analyze_functions(lines, file_path, file_result)
@@ -60,7 +65,7 @@ func _scan_directory(path: String) -> void:
 				_scan_directory(full_path)
 		elif file_name.ends_with(".gd"):
 			if not config.is_path_excluded(full_path):
-				var file_result := analyze_file(full_path)
+				var file_result = analyze_file(full_path)
 				if file_result:
 					result.add_file_result(file_result)
 					# Add file's issues to main result
@@ -72,19 +77,19 @@ func _scan_directory(path: String) -> void:
 	dir.list_dir_end()
 
 
-func _analyze_file_level(lines: Array, file_path: String, file_result: FileResult) -> void:
+func _analyze_file_level(lines: Array, file_path: String, file_result) -> void:
 	var line_count := lines.size()
 
 	# Check file length
 	if config.check_file_length:
 		if line_count > config.line_limit_hard:
-			result.add_issue(Issue.create(
-				file_path, 1, Issue.Severity.CRITICAL, "file-length",
+			result.add_issue(IssueClass.create(
+				file_path, 1, IssueClass.Severity.CRITICAL, "file-length",
 				"File exceeds %d lines (%d)" % [config.line_limit_hard, line_count]
 			))
 		elif line_count > config.line_limit_soft:
-			result.add_issue(Issue.create(
-				file_path, 1, Issue.Severity.WARNING, "file-length",
+			result.add_issue(IssueClass.create(
+				file_path, 1, IssueClass.Severity.WARNING, "file-length",
 				"File exceeds %d lines (%d)" % [config.line_limit_soft, line_count]
 			))
 
@@ -96,8 +101,8 @@ func _analyze_file_level(lines: Array, file_path: String, file_result: FileResul
 
 		# Long lines
 		if config.check_long_lines and line.length() > config.max_line_length:
-			result.add_issue(Issue.create(
-				file_path, line_num, Issue.Severity.INFO, "long-line",
+			result.add_issue(IssueClass.create(
+				file_path, line_num, IssueClass.Severity.INFO, "long-line",
 				"Line exceeds %d chars (%d)" % [config.max_line_length, line.length()]
 			))
 
@@ -105,10 +110,13 @@ func _analyze_file_level(lines: Array, file_path: String, file_result: FileResul
 		if config.check_todo_comments:
 			for pattern in config.todo_patterns:
 				if pattern in trimmed:
-					var severity := Issue.Severity.INFO if pattern == "TODO" else Issue.Severity.WARNING
-					result.add_issue(Issue.create(
+					var severity := IssueClass.Severity.INFO if pattern == "TODO" else IssueClass.Severity.WARNING
+					var comment_text := trimmed.substr(trimmed.find(pattern) + pattern.length()).strip_edges()
+					if comment_text.begins_with(":"):
+						comment_text = comment_text.substr(1).strip_edges()
+					result.add_issue(IssueClass.create(
 						file_path, line_num, severity, "todo-comment",
-						"%s: %s" % [pattern, trimmed.substr(trimmed.find(pattern))]
+						"%s: %s" % [pattern, comment_text]
 					))
 					break  # Only report once per line
 
@@ -123,8 +131,8 @@ func _analyze_file_level(lines: Array, file_path: String, file_result: FileResul
 			if not is_whitelisted:
 				for pattern in config.print_patterns:
 					if pattern in trimmed and not trimmed.begins_with("#"):
-						result.add_issue(Issue.create(
-							file_path, line_num, Issue.Severity.WARNING, "print-statement",
+						result.add_issue(IssueClass.create(
+							file_path, line_num, IssueClass.Severity.WARNING, "print-statement",
 							"Debug print statement: %s" % trimmed.substr(0, mini(60, trimmed.length()))
 						))
 						break
@@ -153,7 +161,7 @@ func _analyze_file_level(lines: Array, file_path: String, file_result: FileResul
 			_check_variable_type_hints(trimmed, file_path, line_num)
 
 
-func _analyze_functions(lines: Array, file_path: String, file_result: FileResult) -> void:
+func _analyze_functions(lines: Array, file_path: String, file_result) -> void:
 	var current_func: Dictionary = {}
 	var in_function := false
 	var func_start_line := 0
@@ -207,7 +215,7 @@ func _parse_function_signature(line: String, line_num: int) -> Dictionary:
 	return func_data
 
 
-func _finalize_function(func_data: Dictionary, body_lines: Array, file_path: String, file_result: FileResult) -> void:
+func _finalize_function(func_data: Dictionary, body_lines: Array, file_path: String, file_result) -> void:
 	var line_count := body_lines.size() + 1  # +1 for signature
 	var max_nesting := _calculate_max_nesting(body_lines)
 	var is_empty := _is_empty_function(body_lines)
@@ -224,47 +232,47 @@ func _finalize_function(func_data: Dictionary, body_lines: Array, file_path: Str
 	# Function length check
 	if config.check_function_length:
 		if line_count > config.function_line_critical:
-			result.add_issue(Issue.create(
-				file_path, func_line, Issue.Severity.CRITICAL, "long-function",
+			result.add_issue(IssueClass.create(
+				file_path, func_line, IssueClass.Severity.CRITICAL, "long-function",
 				"Function '%s' exceeds %d lines (%d)" % [func_data.name, config.function_line_critical, line_count]
 			))
 		elif line_count > config.function_line_limit:
-			result.add_issue(Issue.create(
-				file_path, func_line, Issue.Severity.WARNING, "long-function",
+			result.add_issue(IssueClass.create(
+				file_path, func_line, IssueClass.Severity.WARNING, "long-function",
 				"Function '%s' exceeds %d lines (%d)" % [func_data.name, config.function_line_limit, line_count]
 			))
 
 	# Parameter count check
 	if config.check_parameters and func_data.params > config.max_parameters:
-		result.add_issue(Issue.create(
-			file_path, func_line, Issue.Severity.WARNING, "too-many-params",
+		result.add_issue(IssueClass.create(
+			file_path, func_line, IssueClass.Severity.WARNING, "too-many-params",
 			"Function '%s' has %d parameters (max %d)" % [func_data.name, func_data.params, config.max_parameters]
 		))
 
 	# Nesting depth check
 	if config.check_nesting and max_nesting > config.max_nesting:
-		result.add_issue(Issue.create(
-			file_path, func_line, Issue.Severity.WARNING, "deep-nesting",
+		result.add_issue(IssueClass.create(
+			file_path, func_line, IssueClass.Severity.WARNING, "deep-nesting",
 			"Function '%s' has %d nesting levels (max %d)" % [func_data.name, max_nesting, config.max_nesting]
 		))
 
 	# Empty function check
 	if config.check_empty_functions and is_empty:
-		result.add_issue(Issue.create(
-			file_path, func_line, Issue.Severity.INFO, "empty-function",
+		result.add_issue(IssueClass.create(
+			file_path, func_line, IssueClass.Severity.INFO, "empty-function",
 			"Function '%s' is empty or contains only 'pass'" % func_data.name
 		))
 
 	# Cyclomatic complexity check
 	if config.check_cyclomatic_complexity:
 		if complexity > config.cyclomatic_critical:
-			result.add_issue(Issue.create(
-				file_path, func_line, Issue.Severity.CRITICAL, "high-complexity",
+			result.add_issue(IssueClass.create(
+				file_path, func_line, IssueClass.Severity.CRITICAL, "high-complexity",
 				"Function '%s' has complexity %d (max %d)" % [func_data.name, complexity, config.cyclomatic_critical]
 			))
 		elif complexity > config.cyclomatic_warning:
-			result.add_issue(Issue.create(
-				file_path, func_line, Issue.Severity.WARNING, "high-complexity",
+			result.add_issue(IssueClass.create(
+				file_path, func_line, IssueClass.Severity.WARNING, "high-complexity",
 				"Function '%s' has complexity %d (warning at %d)" % [func_data.name, complexity, config.cyclomatic_warning]
 			))
 
@@ -273,8 +281,8 @@ func _finalize_function(func_data: Dictionary, body_lines: Array, file_path: Str
 		# Skip _init, _ready, _process, etc. (built-in overrides)
 		var func_name: String = func_data.name
 		if not func_name.begins_with("_"):
-			result.add_issue(Issue.create(
-				file_path, func_line, Issue.Severity.INFO, "missing-return-type",
+			result.add_issue(IssueClass.create(
+				file_path, func_line, IssueClass.Severity.INFO, "missing-return-type",
 				"Function '%s' has no return type annotation" % func_name
 			))
 
@@ -326,14 +334,14 @@ func _extract_string_arg(line: String) -> String:
 	return ""
 
 
-func _get_issues_for_file_result(_file_result: FileResult, _file_path: String) -> Array[Issue]:
+func _get_issues_for_file_result(_file_result, _file_path: String) -> Array:
 	# Issues are added directly during analysis, this is for potential future use
 	return []
 
 
-func _calculate_debt_score(file_result: FileResult) -> void:
+func _calculate_debt_score(file_result) -> void:
 	var score := 0
-	var line_count := file_result.line_count
+	var line_count: int = file_result.line_count
 
 	# Line count scoring
 	if line_count > config.line_limit_hard:
@@ -389,8 +397,8 @@ func _check_magic_numbers(line: String, file_path: String, line_num: int) -> voi
 		if pos > 0 and line[pos - 1] == '"':
 			continue
 
-		result.add_issue(Issue.create(
-			file_path, line_num, Issue.Severity.INFO, "magic-number",
+		result.add_issue(IssueClass.create(
+			file_path, line_num, IssueClass.Severity.INFO, "magic-number",
 			"Magic number %s (consider using a named constant)" % num_str
 		))
 		break  # Only report first magic number per line
@@ -399,8 +407,8 @@ func _check_magic_numbers(line: String, file_path: String, line_num: int) -> voi
 func _check_commented_code(line: String, file_path: String, line_num: int) -> void:
 	for pattern in config.commented_code_patterns:
 		if line.begins_with(pattern) or ("\t" + pattern) in line or (" " + pattern) in line:
-			result.add_issue(Issue.create(
-				file_path, line_num, Issue.Severity.INFO, "commented-code",
+			result.add_issue(IssueClass.create(
+				file_path, line_num, IssueClass.Severity.INFO, "commented-code",
 				"Commented-out code detected"
 			))
 			return
@@ -423,8 +431,8 @@ func _check_variable_type_hints(line: String, file_path: String, line_num: int) 
 	var after_var := line.strip_edges().substr(4)  # After "var "
 	var var_name := after_var.split("=")[0].split(":")[0].strip_edges()
 
-	result.add_issue(Issue.create(
-		file_path, line_num, Issue.Severity.INFO, "missing-type-hint",
+	result.add_issue(IssueClass.create(
+		file_path, line_num, IssueClass.Severity.INFO, "missing-type-hint",
 		"Variable '%s' has no type annotation" % var_name
 	))
 
@@ -467,12 +475,12 @@ func _calculate_cyclomatic_complexity(body_lines: Array) -> int:
 	return complexity
 
 
-func _check_god_class(file_path: String, file_result: FileResult) -> void:
+func _check_god_class(file_path: String, file_result) -> void:
 	if not config.check_god_class:
 		return
 
 	var public_funcs := 0
-	var signal_count := file_result.signals_found.size()
+	var signal_count: int = file_result.signals_found.size()
 	var export_count := 0
 
 	# Count public functions (not starting with _)
@@ -496,7 +504,7 @@ func _check_god_class(file_path: String, file_result: FileResult) -> void:
 		reasons.append("%d signals (max %d)" % [signal_count, config.god_class_signals])
 
 	if is_god_class:
-		result.add_issue(Issue.create(
-			file_path, 1, Issue.Severity.WARNING, "god-class",
+		result.add_issue(IssueClass.create(
+			file_path, 1, IssueClass.Severity.WARNING, "god-class",
 			"God class detected: %s" % ", ".join(reasons)
 		))

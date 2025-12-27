@@ -2,35 +2,38 @@ class_name AnalysisResult
 extends RefCounted
 ## Holds complete results from a code analysis run
 
-var issues: Array[Issue] = []
+const IssueClass = preload("res://addons/godot-qube/analyzer/issue.gd")
+const FileResultClass = preload("res://addons/godot-qube/analyzer/file-result.gd")
+
+var issues: Array = []
 var files_analyzed: int = 0
 var total_lines: int = 0
 var analysis_time_ms: int = 0
 
 # Per-file data for detailed reporting
-var file_results: Array[FileResult] = []
+var file_results: Array = []
 
 
-func add_issue(issue: Issue) -> void:
+func add_issue(issue) -> void:
 	issues.append(issue)
 
 
-func add_file_result(result: FileResult) -> void:
+func add_file_result(result) -> void:
 	file_results.append(result)
 	files_analyzed += 1
 	total_lines += result.line_count
 
 
-func get_issues_by_severity(severity: Issue.Severity) -> Array[Issue]:
-	var filtered: Array[Issue] = []
+func get_issues_by_severity(severity: int) -> Array:
+	var filtered: Array = []
 	for issue in issues:
 		if issue.severity == severity:
 			filtered.append(issue)
 	return filtered
 
 
-func get_issues_for_file(path: String) -> Array[Issue]:
-	var filtered: Array[Issue] = []
+func get_issues_for_file(path: String) -> Array:
+	var filtered: Array = []
 	for issue in issues:
 		if issue.file_path == path:
 			filtered.append(issue)
@@ -38,15 +41,15 @@ func get_issues_for_file(path: String) -> Array[Issue]:
 
 
 func get_critical_count() -> int:
-	return get_issues_by_severity(Issue.Severity.CRITICAL).size()
+	return get_issues_by_severity(IssueClass.Severity.CRITICAL).size()
 
 
 func get_warning_count() -> int:
-	return get_issues_by_severity(Issue.Severity.WARNING).size()
+	return get_issues_by_severity(IssueClass.Severity.WARNING).size()
 
 
 func get_info_count() -> int:
-	return get_issues_by_severity(Issue.Severity.INFO).size()
+	return get_issues_by_severity(IssueClass.Severity.INFO).size()
 
 
 func get_total_debt_score() -> int:

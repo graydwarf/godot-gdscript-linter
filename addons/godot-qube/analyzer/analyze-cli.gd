@@ -143,13 +143,20 @@ func _output_clickable(result) -> void:
 
 # qube:ignore-function:print-statement - Console output formatting
 func _output_console(result) -> void:
+	_print_console_header(result)
+	_print_top_files_by_size(result)
+	_print_top_files_by_debt(result)
+	_print_critical_issues(result)
+	_print_long_functions(result)
+	_print_todo_comments(result)
+	_print_console_footer()
+
+func _print_console_header(result) -> void:
 	print("")
 	print("=" .repeat(60))
 	print("GODOT QUBE - CODE QUALITY REPORT")
 	print("=" .repeat(60))
 	print("")
-
-	# Summary
 	print("SUMMARY")
 	print("-" .repeat(40))
 	print("Total files analyzed: %d" % result.files_analyzed)
@@ -161,7 +168,7 @@ func _output_console(result) -> void:
 	print("Analysis time: %dms" % result.analysis_time_ms)
 	print("")
 
-	# Top files by size
+func _print_top_files_by_size(result) -> void:
 	print("TOP 10 FILES BY SIZE")
 	print("-" .repeat(40))
 	var by_size: Array = result.file_results.duplicate()
@@ -171,7 +178,7 @@ func _output_console(result) -> void:
 		print("%4d lines | %s" % [f.line_count, f.file_path])
 	print("")
 
-	# Top files by debt
+func _print_top_files_by_debt(result) -> void:
 	print("TOP 10 FILES BY DEBT SCORE")
 	print("-" .repeat(40))
 	var by_debt: Array = result.file_results.duplicate()
@@ -183,16 +190,17 @@ func _output_console(result) -> void:
 		print("Score %3d | %4d lines | %s" % [f.debt_score, f.line_count, f.file_path])
 	print("")
 
-	# Critical issues
+func _print_critical_issues(result) -> void:
 	var critical: Array = result.get_issues_by_severity(IssueClass.Severity.CRITICAL)
-	if critical.size() > 0:
-		print("CRITICAL ISSUES (Fix Immediately)")
-		print("-" .repeat(40))
-		for issue in critical:
-			print("  %s" % issue.get_clickable_format())
-		print("")
+	if critical.size() == 0:
+		return
+	print("CRITICAL ISSUES (Fix Immediately)")
+	print("-" .repeat(40))
+	for issue in critical:
+		print("  %s" % issue.get_clickable_format())
+	print("")
 
-	# Long functions
+func _print_long_functions(result) -> void:
 	print("LONG FUNCTIONS")
 	print("-" .repeat(40))
 	var long_func_issues: Array = result.issues.filter(func(i): return i.check_id == "long-function")
@@ -202,18 +210,20 @@ func _output_console(result) -> void:
 		print("  %s" % issue.get_clickable_format())
 	print("")
 
-	# TODO/FIXME summary
+func _print_todo_comments(result) -> void:
 	var todo_issues: Array = result.issues.filter(func(i): return i.check_id == "todo-comment")
-	if todo_issues.size() > 0:
-		print("TODO/FIXME COMMENTS (%d total)" % todo_issues.size())
-		print("-" .repeat(40))
-		for i in range(mini(10, todo_issues.size())):
-			var issue = todo_issues[i]
-			print("  %s" % issue.get_clickable_format())
-		if todo_issues.size() > 10:
-			print("  ... and %d more" % (todo_issues.size() - 10))
-		print("")
+	if todo_issues.size() == 0:
+		return
+	print("TODO/FIXME COMMENTS (%d total)" % todo_issues.size())
+	print("-" .repeat(40))
+	for i in range(mini(10, todo_issues.size())):
+		var issue = todo_issues[i]
+		print("  %s" % issue.get_clickable_format())
+	if todo_issues.size() > 10:
+		print("  ... and %d more" % (todo_issues.size() - 10))
+	print("")
 
+func _print_console_footer() -> void:
 	print("=" .repeat(60))
 	print("Run with --clickable for Godot Output panel clickable links")
 	print("Run with --json for machine-readable output")

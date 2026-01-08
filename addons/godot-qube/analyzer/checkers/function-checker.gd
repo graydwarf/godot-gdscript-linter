@@ -78,54 +78,77 @@ func _finalize_function(func_data: Dictionary, body_lines: Array, file_result, a
 	func_data["complexity"] = complexity
 	file_result.add_function(func_data)
 
+	_check_function_length(func_data, line_count, add_issue_callback)
+	_check_parameter_count(func_data, add_issue_callback)
+	_check_nesting_depth(func_data, max_nesting, add_issue_callback)
+	_check_empty_function(func_data, is_empty, add_issue_callback)
+	_check_complexity(func_data, complexity, add_issue_callback)
+	_check_return_type(func_data, add_issue_callback)
+	_check_naming(func_data, add_issue_callback)
+
+
+func _check_function_length(func_data: Dictionary, line_count: int, add_issue_callback: Callable) -> void:
+	if not config.check_function_length:
+		return
 	var func_line: int = func_data.line
 	var func_name: String = func_data.name
+	if line_count > config.function_line_critical:
+		add_issue_callback.call(func_line, "critical", "long-function",
+			"Function '%s' exceeds %d lines (%d)" % [func_name, config.function_line_critical, line_count])
+	elif line_count > config.function_line_limit:
+		add_issue_callback.call(func_line, "warning", "long-function",
+			"Function '%s' exceeds %d lines (%d)" % [func_name, config.function_line_limit, line_count])
 
-	# Function length check
-	if config.check_function_length:
-		if line_count > config.function_line_critical:
-			add_issue_callback.call(func_line, "critical", "long-function",
-				"Function '%s' exceeds %d lines (%d)" % [func_name, config.function_line_critical, line_count])
-		elif line_count > config.function_line_limit:
-			add_issue_callback.call(func_line, "warning", "long-function",
-				"Function '%s' exceeds %d lines (%d)" % [func_name, config.function_line_limit, line_count])
 
-	# Parameter count check
-	if config.check_parameters and func_data.params > config.max_parameters:
-		add_issue_callback.call(func_line, "warning", "too-many-params",
-			"Function '%s' has %d parameters (max %d)" % [func_name, func_data.params, config.max_parameters])
+func _check_parameter_count(func_data: Dictionary, add_issue_callback: Callable) -> void:
+	if not config.check_parameters or func_data.params <= config.max_parameters:
+		return
+	add_issue_callback.call(func_data.line, "warning", "too-many-params",
+		"Function '%s' has %d parameters (max %d)" % [func_data.name, func_data.params, config.max_parameters])
 
-	# Nesting depth check
-	if config.check_nesting and max_nesting > config.max_nesting:
-		add_issue_callback.call(func_line, "warning", "deep-nesting",
-			"Function '%s' has %d nesting levels (max %d)" % [func_name, max_nesting, config.max_nesting])
 
-	# Empty function check
-	if config.check_empty_functions and is_empty:
-		add_issue_callback.call(func_line, "info", "empty-function",
-			"Function '%s' is empty or contains only 'pass'" % func_name)
+func _check_nesting_depth(func_data: Dictionary, max_nesting: int, add_issue_callback: Callable) -> void:
+	if not config.check_nesting or max_nesting <= config.max_nesting:
+		return
+	add_issue_callback.call(func_data.line, "warning", "deep-nesting",
+		"Function '%s' has %d nesting levels (max %d)" % [func_data.name, max_nesting, config.max_nesting])
 
-	# Cyclomatic complexity check
-	if config.check_cyclomatic_complexity:
-		if complexity > config.cyclomatic_critical:
-			add_issue_callback.call(func_line, "critical", "high-complexity",
-				"Function '%s' has complexity %d (max %d)" % [func_name, complexity, config.cyclomatic_critical])
-		elif complexity > config.cyclomatic_warning:
-			add_issue_callback.call(func_line, "warning", "high-complexity",
-				"Function '%s' has complexity %d (warning at %d)" % [func_name, complexity, config.cyclomatic_warning])
 
-	# Missing return type check
-	if config.check_missing_types and not func_data.has_return_type:
-		# Skip _init, _ready, _process, etc. (built-in overrides)
-		if not func_name.begins_with("_"):
-			add_issue_callback.call(func_line, "info", "missing-return-type",
-				"Function '%s' has no return type annotation" % func_name)
+func _check_empty_function(func_data: Dictionary, is_empty: bool, add_issue_callback: Callable) -> void:
+	if not config.check_empty_functions or not is_empty:
+		return
+	add_issue_callback.call(func_data.line, "info", "empty-function",
+		"Function '%s' is empty or contains only 'pass'" % func_data.name)
 
-	# Function naming convention check
-	if _naming_checker:
-		var naming_issue = _naming_checker.check_function_naming(func_name, func_line)
-		if naming_issue:
-			add_issue_callback.call(naming_issue.line, naming_issue.severity, naming_issue.check_id, naming_issue.message)
+
+func _check_complexity(func_data: Dictionary, complexity: int, add_issue_callback: Callable) -> void:
+	if not config.check_cyclomatic_complexity:
+		return
+	var func_line: int = func_data.line
+	var func_name: String = func_data.name
+	if complexity > config.cyclomatic_critical:
+		add_issue_callback.call(func_line, "critical", "high-complexity",
+			"Function '%s' has complexity %d (max %d)" % [func_name, complexity, config.cyclomatic_critical])
+	elif complexity > config.cyclomatic_warning:
+		add_issue_callback.call(func_line, "warning", "high-complexity",
+			"Function '%s' has complexity %d (warning at %d)" % [func_name, complexity, config.cyclomatic_warning])
+
+
+func _check_return_type(func_data: Dictionary, add_issue_callback: Callable) -> void:
+	if not config.check_missing_types or func_data.has_return_type:
+		return
+	# Skip _init, _ready, _process, etc. (built-in overrides)
+	if not func_data.name.begins_with("_"):
+		add_issue_callback.call(func_data.line, "info", "missing-return-type",
+			"Function '%s' has no return type annotation" % func_data.name)
+
+
+func _check_naming(func_data: Dictionary, add_issue_callback: Callable) -> void:
+	if not _naming_checker:
+		return
+	var naming_issue = _naming_checker.check_function_naming(func_data.name, func_data.line)
+	if naming_issue:
+		add_issue_callback.call(naming_issue.line, naming_issue.severity, naming_issue.check_id, naming_issue.message)
 
 
 func _calculate_max_nesting(body_lines: Array) -> int:

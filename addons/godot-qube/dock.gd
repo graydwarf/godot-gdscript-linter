@@ -63,6 +63,14 @@ var _claude_tooltip: PanelContainer
 var _grouped_issues_by_type: Dictionary = {}  # check_id -> Array of issues
 var _grouped_issues_by_severity: Dictionary = {}  # severity -> Array of issues
 
+# Claude customize dialog
+var _claude_customize_popup: PanelContainer
+var _claude_customize_context: RichTextLabel  # Shows issue(s) being sent
+var _claude_customize_command: LineEdit
+var _claude_customize_instructions: TextEdit
+var _claude_customize_pending_link: String = ""  # Store link while dialog is open
+var _claude_context_menu_link: String = ""  # Store link when context menu opens
+
 # Current config instance for settings
 var current_config: Resource
 
@@ -140,6 +148,7 @@ func _connect_signals() -> void:
 	settings_button.pressed.connect(_on_settings_pressed)
 	_setup_claude_context_menu()
 	_setup_claude_tooltip()
+	_setup_claude_customize_popup()
 
 
 func _setup_filters() -> void:
@@ -310,6 +319,8 @@ func _setup_claude_context_menu() -> void:
 	_claude_context_menu = PopupMenu.new()
 	_claude_context_menu.add_item("Plan Fix (default)", 0)
 	_claude_context_menu.add_item("Fix Immediately", 1)
+	_claude_context_menu.add_separator()
+	_claude_context_menu.add_item("Customize...", 2)
 	_claude_context_menu.id_pressed.connect(_on_claude_context_menu_selected)
 	add_child(_claude_context_menu)
 
@@ -332,6 +343,214 @@ func _setup_claude_tooltip() -> void:
 	_claude_tooltip.visible = false
 	_claude_tooltip.z_index = 100
 	add_child(_claude_tooltip)
+
+
+func _setup_claude_customize_popup() -> void:
+	# Main popup container
+	_claude_customize_popup = PanelContainer.new()
+	_claude_customize_popup.custom_minimum_size = Vector2(550, 500)
+	_claude_customize_popup.visible = false
+	_claude_customize_popup.z_index = 200
+	_claude_customize_popup.top_level = true  # Render independently of parent clipping
+
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.12, 0.14, 0.18, 0.98)
+	style.border_color = Color(0.3, 0.35, 0.45, 0.8)
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(8)
+	style.set_content_margin_all(16)
+	_claude_customize_popup.add_theme_stylebox_override("panel", style)
+
+	# Main vertical layout
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 10)
+	_claude_customize_popup.add_child(vbox)
+
+	# Title
+	var title := Label.new()
+	title.text = "Customize Claude Launch"
+	title.add_theme_font_size_override("font_size", 16)
+	title.add_theme_color_override("font_color", Color(0.9, 0.9, 0.95))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(title)
+
+	# Separator
+	var sep := HSeparator.new()
+	sep.add_theme_constant_override("separation", 6)
+	vbox.add_child(sep)
+
+	# Issue Context section (read-only, shows what will be sent)
+	var context_label := Label.new()
+	context_label.text = "Issue Context:"
+	context_label.add_theme_font_size_override("font_size", 13)
+	context_label.add_theme_color_override("font_color", Color(0.75, 0.75, 0.8))
+	vbox.add_child(context_label)
+
+	_claude_customize_context = RichTextLabel.new()
+	_claude_customize_context.bbcode_enabled = true
+	_claude_customize_context.fit_content = false
+	_claude_customize_context.scroll_active = true
+	_claude_customize_context.custom_minimum_size = Vector2(0, 100)
+	_claude_customize_context.add_theme_font_size_override("normal_font_size", 11)
+	_claude_customize_context.add_theme_color_override("default_color", Color(0.7, 0.75, 0.8))
+	# Darker background for context area
+	var context_style := StyleBoxFlat.new()
+	context_style.bg_color = Color(0.08, 0.09, 0.11, 1.0)
+	context_style.set_corner_radius_all(4)
+	context_style.set_content_margin_all(8)
+	_claude_customize_context.add_theme_stylebox_override("normal", context_style)
+	vbox.add_child(_claude_customize_context)
+
+	# Launch Command section
+	var cmd_label := Label.new()
+	cmd_label.text = "Launch Command:"
+	cmd_label.add_theme_font_size_override("font_size", 13)
+	cmd_label.add_theme_color_override("font_color", Color(0.75, 0.75, 0.8))
+	vbox.add_child(cmd_label)
+
+	_claude_customize_command = LineEdit.new()
+	_claude_customize_command.placeholder_text = "claude --permission-mode plan"
+	_claude_customize_command.add_theme_font_size_override("font_size", 12)
+	vbox.add_child(_claude_customize_command)
+
+	# Custom Instructions section
+	var instr_label := Label.new()
+	instr_label.text = "Custom Instructions:"
+	instr_label.add_theme_font_size_override("font_size", 13)
+	instr_label.add_theme_color_override("font_color", Color(0.75, 0.75, 0.8))
+	vbox.add_child(instr_label)
+
+	_claude_customize_instructions = TextEdit.new()
+	_claude_customize_instructions.placeholder_text = "Additional instructions for Claude..."
+	_claude_customize_instructions.add_theme_font_size_override("font_size", 12)
+	_claude_customize_instructions.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_claude_customize_instructions.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+	vbox.add_child(_claude_customize_instructions)
+
+	# Button container
+	var btn_container := HBoxContainer.new()
+	btn_container.alignment = BoxContainer.ALIGNMENT_END
+	btn_container.add_theme_constant_override("separation", 8)
+	vbox.add_child(btn_container)
+
+	# Cancel button
+	var cancel_btn := Button.new()
+	cancel_btn.text = "Cancel"
+	cancel_btn.custom_minimum_size = Vector2(80, 32)
+	cancel_btn.pressed.connect(_on_claude_customize_cancel)
+	btn_container.add_child(cancel_btn)
+
+	# Launch button
+	var launch_btn := Button.new()
+	launch_btn.text = "Launch"
+	launch_btn.custom_minimum_size = Vector2(80, 32)
+	launch_btn.pressed.connect(_on_claude_customize_launch)
+	btn_container.add_child(launch_btn)
+
+	add_child(_claude_customize_popup)
+
+
+func _show_claude_customize_popup() -> void:
+	# Prepopulate from settings
+	_claude_customize_command.text = settings_manager.claude_code_command
+	_claude_customize_instructions.text = settings_manager.claude_custom_instructions
+
+	# Build issue context display
+	var context_text := ""
+
+	if _claude_customize_pending_link.begins_with("claude://"):
+		# Single issue
+		var encoded_data: String = _claude_customize_pending_link.substr(9)
+		var decoded_data: String = encoded_data.uri_decode()
+		var parts := decoded_data.split("|")
+		if parts.size() >= 5:
+			context_text = "[b]Single Issue[/b]\n"
+			context_text += "[color=#8899aa]File:[/color] %s\n" % parts[0]
+			context_text += "[color=#8899aa]Line:[/color] %s\n" % parts[1]
+			context_text += "[color=#8899aa]Type:[/color] %s\n" % parts[2]
+			context_text += "[color=#8899aa]Severity:[/color] %s\n" % parts[3]
+			context_text += "[color=#8899aa]Message:[/color] %s" % parts[4]
+
+	elif _claude_customize_pending_link.begins_with("claude-type://"):
+		# Batch by type
+		var type_key: String = _claude_customize_pending_link.substr(14).uri_decode()
+		if _grouped_issues_by_type.has(type_key):
+			var issues: Array = _grouped_issues_by_type[type_key]
+			context_text = "[b]Batch: %d issues of type '%s'[/b]\n\n" % [issues.size(), type_key]
+			for i in range(mini(issues.size(), 5)):  # Show first 5
+				var issue = issues[i]
+				context_text += "[color=#6688aa]%d.[/color] %s:%d - %s\n" % [i + 1, issue.file_path, issue.line, issue.message]
+			if issues.size() > 5:
+				context_text += "[color=#666677]... and %d more[/color]" % (issues.size() - 5)
+
+	elif _claude_customize_pending_link.begins_with("claude-severity://"):
+		# Batch by severity
+		var severity_key: String = _claude_customize_pending_link.substr(18)
+		if _grouped_issues_by_severity.has(severity_key):
+			var issues: Array = _grouped_issues_by_severity[severity_key]
+			context_text = "[b]Batch: %d %s issues[/b]\n\n" % [issues.size(), severity_key]
+			for i in range(mini(issues.size(), 5)):  # Show first 5
+				var issue = issues[i]
+				context_text += "[color=#6688aa]%d.[/color] %s:%d - %s\n" % [i + 1, issue.file_path, issue.line, issue.message]
+			if issues.size() > 5:
+				context_text += "[color=#666677]... and %d more[/color]" % (issues.size() - 5)
+
+	_claude_customize_context.clear()
+	_claude_customize_context.append_text(context_text)
+
+	# Center on screen
+	var screen_size := DisplayServer.screen_get_size()
+	var popup_size := _claude_customize_popup.custom_minimum_size
+	_claude_customize_popup.global_position = Vector2(
+		(screen_size.x - popup_size.x) / 2,
+		(screen_size.y - popup_size.y) / 2
+	)
+	_claude_customize_popup.visible = true
+
+
+func _on_claude_customize_cancel() -> void:
+	_claude_customize_popup.visible = false
+	_claude_customize_pending_link = ""
+
+
+func _on_claude_customize_launch() -> void:
+	_claude_customize_popup.visible = false
+
+	if _claude_customize_pending_link.is_empty():
+		return
+
+	var custom_command := _claude_customize_command.text.strip_edges()
+	var custom_instructions := _claude_customize_instructions.text
+
+	# Handle single issue links
+	if _claude_customize_pending_link.begins_with("claude://"):
+		var encoded_data: String = _claude_customize_pending_link.substr(9)
+		var decoded_data: String = encoded_data.uri_decode()
+		var parts := decoded_data.split("|")
+
+		if parts.size() >= 5:
+			var issue_data := {
+				"file_path": parts[0],
+				"line": int(parts[1]),
+				"check_id": parts[2],
+				"severity": parts[3],
+				"message": parts[4]
+			}
+			_launch_claude_code_custom(issue_data, custom_command, custom_instructions)
+
+	# Handle batch type-level links
+	elif _claude_customize_pending_link.begins_with("claude-type://"):
+		var type_key: String = _claude_customize_pending_link.substr(14).uri_decode()
+		if _grouped_issues_by_type.has(type_key):
+			_launch_claude_code_batch_custom(_grouped_issues_by_type[type_key], custom_command, custom_instructions)
+
+	# Handle batch severity-level links
+	elif _claude_customize_pending_link.begins_with("claude-severity://"):
+		var severity_key: String = _claude_customize_pending_link.substr(18)
+		if _grouped_issues_by_severity.has(severity_key):
+			_launch_claude_code_batch_custom(_grouped_issues_by_severity[severity_key], custom_command, custom_instructions)
+
+	_claude_customize_pending_link = ""
 
 
 func _on_meta_hover_started(meta: Variant) -> void:
@@ -365,20 +584,27 @@ func _on_results_gui_input(event: InputEvent) -> void:
 		if mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed:
 			if _hovered_claude_link != "" and settings_manager.claude_code_enabled:
 				_hide_claude_tooltip()
+				_claude_context_menu_link = _hovered_claude_link  # Store before menu opens
 				_claude_context_menu.position = DisplayServer.mouse_get_position() + Vector2i(16, -8)
 				_claude_context_menu.popup()
 				get_viewport().set_input_as_handled()
 
 
 func _on_claude_context_menu_selected(id: int) -> void:
-	if _hovered_claude_link == "":
+	if _claude_context_menu_link == "":
+		return
+
+	# Handle Customize option - show dialog instead of launching
+	if id == 2:
+		_claude_customize_pending_link = _claude_context_menu_link
+		_show_claude_customize_popup()
 		return
 
 	var use_plan_mode := (id == 0)
 
 	# Handle single issue links
-	if _hovered_claude_link.begins_with("claude://"):
-		var encoded_data: String = _hovered_claude_link.substr(9)
+	if _claude_context_menu_link.begins_with("claude://"):
+		var encoded_data: String = _claude_context_menu_link.substr(9)
 		var decoded_data: String = encoded_data.uri_decode()
 		var parts := decoded_data.split("|")
 
@@ -394,15 +620,15 @@ func _on_claude_context_menu_selected(id: int) -> void:
 		return
 
 	# Handle batch type-level links
-	if _hovered_claude_link.begins_with("claude-type://"):
-		var type_key: String = _hovered_claude_link.substr(14).uri_decode()
+	if _claude_context_menu_link.begins_with("claude-type://"):
+		var type_key: String = _claude_context_menu_link.substr(14).uri_decode()
 		if _grouped_issues_by_type.has(type_key):
 			_launch_claude_code_batch(_grouped_issues_by_type[type_key], use_plan_mode)
 		return
 
 	# Handle batch severity-level links
-	if _hovered_claude_link.begins_with("claude-severity://"):
-		var severity_key: String = _hovered_claude_link.substr(18)
+	if _claude_context_menu_link.begins_with("claude-severity://"):
+		var severity_key: String = _claude_context_menu_link.substr(18)
 		if _grouped_issues_by_severity.has(severity_key):
 			_launch_claude_code_batch(_grouped_issues_by_severity[severity_key], use_plan_mode)
 
@@ -808,6 +1034,72 @@ func _launch_claude_code_batch(issues: Array, use_plan_mode: bool) -> void:
 		command = settings_manager.claude_code_command.replace("--permission-mode plan", "").strip_edges()
 		if command.is_empty():
 			command = "claude"
+
+	var args: PackedStringArray = [
+		"-d", project_path,
+		"powershell", "-NoProfile", "-NoExit",
+		"-Command", "%s '%s'" % [command, escaped_prompt]
+	]
+	OS.create_process("wt", args)
+
+
+# Launches Claude Code with custom command and instructions (from customize dialog)
+func _launch_claude_code_custom(issue: Dictionary, custom_command: String, custom_instructions: String) -> void:
+	var project_path := ProjectSettings.globalize_path("res://")
+
+	var prompt := "Code quality issue to fix:\n\n"
+	prompt += "File: %s\n" % issue.file_path
+	prompt += "Line: %d\n" % issue.line
+	prompt += "Type: %s\n" % issue.check_id
+	prompt += "Severity: %s\n" % issue.severity
+	prompt += "Message: %s\n\n" % issue.message
+	prompt += "Fix this issue."
+
+	if not custom_instructions.strip_edges().is_empty():
+		prompt += "\n\n" + custom_instructions
+
+	var escaped_prompt := prompt.replace("'", "''")
+
+	var command := custom_command if not custom_command.is_empty() else "claude"
+
+	var args: PackedStringArray = [
+		"-d", project_path,
+		"powershell", "-NoProfile", "-NoExit",
+		"-Command", "%s '%s'" % [command, escaped_prompt]
+	]
+	OS.create_process("wt", args)
+
+
+# Launches Claude Code with multiple issues using custom command/instructions
+func _launch_claude_code_batch_custom(issues: Array, custom_command: String, custom_instructions: String) -> void:
+	if issues.is_empty():
+		return
+
+	var project_path := ProjectSettings.globalize_path("res://")
+	var Issue = IssueScript
+
+	var prompt := "Code quality issues to fix (%d total):\n\n" % issues.size()
+
+	for i in range(issues.size()):
+		var issue = issues[i]
+		var severity_str: String = "unknown"
+		match issue.severity:
+			Issue.Severity.CRITICAL: severity_str = "critical"
+			Issue.Severity.WARNING: severity_str = "warning"
+			Issue.Severity.INFO: severity_str = "info"
+
+		prompt += "%d. %s:%d\n" % [i + 1, issue.file_path, issue.line]
+		prompt += "   Type: %s | Severity: %s\n" % [issue.check_id, severity_str]
+		prompt += "   %s\n\n" % issue.message
+
+	prompt += "Fix all these issues."
+
+	if not custom_instructions.strip_edges().is_empty():
+		prompt += "\n\n" + custom_instructions
+
+	var escaped_prompt := prompt.replace("'", "''")
+
+	var command := custom_command if not custom_command.is_empty() else "claude"
 
 	var args: PackedStringArray = [
 		"-d", project_path,

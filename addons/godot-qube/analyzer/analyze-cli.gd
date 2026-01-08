@@ -151,6 +151,7 @@ func _output_console(result) -> void:
 	_print_todo_comments(result)
 	_print_console_footer()
 
+# qube:ignore-function:print-statement - CLI console output
 func _print_console_header(result) -> void:
 	print("")
 	print("=" .repeat(60))
@@ -168,6 +169,7 @@ func _print_console_header(result) -> void:
 	print("Analysis time: %dms" % result.analysis_time_ms)
 	print("")
 
+# qube:ignore-function:print-statement - CLI console output
 func _print_top_files_by_size(result) -> void:
 	print("TOP 10 FILES BY SIZE")
 	print("-" .repeat(40))
@@ -178,6 +180,7 @@ func _print_top_files_by_size(result) -> void:
 		print("%4d lines | %s" % [f.line_count, f.file_path])
 	print("")
 
+# qube:ignore-function:print-statement - CLI console output
 func _print_top_files_by_debt(result) -> void:
 	print("TOP 10 FILES BY DEBT SCORE")
 	print("-" .repeat(40))
@@ -190,6 +193,7 @@ func _print_top_files_by_debt(result) -> void:
 		print("Score %3d | %4d lines | %s" % [f.debt_score, f.line_count, f.file_path])
 	print("")
 
+# qube:ignore-function:print-statement - CLI console output
 func _print_critical_issues(result) -> void:
 	var critical: Array = result.get_issues_by_severity(IssueClass.Severity.CRITICAL)
 	if critical.size() == 0:
@@ -200,6 +204,7 @@ func _print_critical_issues(result) -> void:
 		print("  %s" % issue.get_clickable_format())
 	print("")
 
+# qube:ignore-function:print-statement - CLI console output
 func _print_long_functions(result) -> void:
 	print("LONG FUNCTIONS")
 	print("-" .repeat(40))
@@ -210,6 +215,7 @@ func _print_long_functions(result) -> void:
 		print("  %s" % issue.get_clickable_format())
 	print("")
 
+# qube:ignore-function:print-statement - CLI console output
 func _print_todo_comments(result) -> void:
 	var todo_issues: Array = result.issues.filter(func(i): return i.check_id == "todo-comment")
 	if todo_issues.size() == 0:
@@ -223,6 +229,7 @@ func _print_todo_comments(result) -> void:
 		print("  ... and %d more" % (todo_issues.size() - 10))
 	print("")
 
+# qube:ignore-function:print-statement - CLI console output
 func _print_console_footer() -> void:
 	print("=" .repeat(60))
 	print("Run with --clickable for Godot Output panel clickable links")

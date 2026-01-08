@@ -10,6 +10,90 @@ func _init(p_config) -> void:
 	config = p_config
 
 
+# Performs all line-level style checks in one pass
+func check_line(line: String, trimmed: String, line_num: int, file_result) -> Array:
+	var issues: Array = []
+
+	_append_issue(issues, _check_long_line(line, line_num))
+	_append_issue(issues, _check_todo_comments(trimmed, line_num))
+	_append_issue(issues, _check_print_statements(trimmed, line_num))
+	_track_metadata(trimmed, file_result)
+	_append_issue(issues, _check_magic_numbers(trimmed, line_num))
+	_append_issue(issues, _check_commented_code(trimmed, line_num))
+	_append_issue(issues, _check_type_hints(trimmed, line_num))
+
+	return issues
+
+
+func _append_issue(issues: Array, issue) -> void:
+	if issue:
+		issues.append(issue)
+
+
+func _check_long_line(line: String, line_num: int) -> Variant:
+	if not config.check_long_lines:
+		return null
+	if line.length() <= config.max_line_length:
+		return null
+	return {
+		"line": line_num,
+		"severity": "info",
+		"check_id": "long-line",
+		"message": "Line exceeds %d chars (%d)" % [config.max_line_length, line.length()]
+	}
+
+
+func _check_todo_comments(trimmed: String, line_num: int) -> Variant:
+	if not config.check_todo_comments:
+		return null
+	return check_todo_comments(trimmed, line_num)
+
+
+func _check_print_statements(trimmed: String, line_num: int) -> Variant:
+	if not config.check_print_statements:
+		return null
+	return check_print_statements(trimmed, line_num)
+
+
+func _check_magic_numbers(trimmed: String, line_num: int) -> Variant:
+	if not config.check_magic_numbers:
+		return null
+	return check_magic_numbers(trimmed, line_num)
+
+
+func _check_commented_code(trimmed: String, line_num: int) -> Variant:
+	if not config.check_commented_code:
+		return null
+	return check_commented_code(trimmed, line_num)
+
+
+func _check_type_hints(trimmed: String, line_num: int) -> Variant:
+	if not config.check_missing_types:
+		return null
+	return check_variable_type_hints(trimmed, line_num)
+
+
+func _track_metadata(trimmed: String, file_result) -> void:
+	# Track signals
+	if trimmed.begins_with("signal "):
+		var signal_name := trimmed.substr(7).split("(")[0].strip_edges()
+		file_result.signals_found.append(signal_name)
+
+	# Track dependencies
+	if trimmed.begins_with("preload(") or trimmed.begins_with("load("):
+		var dep := _extract_string_arg(trimmed)
+		if dep:
+			file_result.dependencies.append(dep)
+
+
+func _extract_string_arg(line: String) -> String:
+	var start := line.find("\"")
+	var end := line.rfind("\"")
+	if start >= 0 and end > start:
+		return line.substr(start + 1, end - start - 1)
+	return ""
+
+
 # Returns issue dictionary or null
 func check_magic_numbers(line: String, line_num: int) -> Variant:
 	# Skip comments, const declarations, and common safe patterns

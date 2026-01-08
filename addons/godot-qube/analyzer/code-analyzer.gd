@@ -169,12 +169,7 @@ func _analyze_file_level(lines: Array, file_path: String, file_result) -> void:
 
 	# Check file length
 	if config.check_file_length:
-		if line_count > config.line_limit_hard:
-			_add_issue(file_path, 1, IssueClass.Severity.CRITICAL, "file-length",
-				"File exceeds %d lines (%d)" % [config.line_limit_hard, line_count])
-		elif line_count > config.line_limit_soft:
-			_add_issue(file_path, 1, IssueClass.Severity.WARNING, "file-length",
-				"File exceeds %d lines (%d)" % [config.line_limit_soft, line_count])
+		_check_file_length(file_path, line_count)
 
 	# Line-by-line checks
 	for i in range(line_count):
@@ -182,55 +177,25 @@ func _analyze_file_level(lines: Array, file_path: String, file_result) -> void:
 		var trimmed := line.strip_edges()
 		var line_num := i + 1
 
-		# Long lines
-		if config.check_long_lines and line.length() > config.max_line_length:
-			_add_issue(file_path, line_num, IssueClass.Severity.INFO, "long-line",
-				"Line exceeds %d chars (%d)" % [config.max_line_length, line.length()])
+		# Style checks (long lines, TODO, print, magic numbers, etc.)
+		var style_issues := _style_checker.check_line(line, trimmed, line_num, file_result)
+		for issue in style_issues:
+			_add_issue(file_path, issue.line, _severity_from_string(issue.severity), issue.check_id, issue.message)
 
-		# TODO/FIXME comments
-		if config.check_todo_comments:
-			var issue = _style_checker.check_todo_comments(trimmed, line_num)
-			if issue:
-				_add_issue(file_path, issue.line, _severity_from_string(issue.severity), issue.check_id, issue.message)
-
-		# Print statements
-		if config.check_print_statements:
-			var issue = _style_checker.check_print_statements(trimmed, line_num)
-			if issue:
-				_add_issue(file_path, issue.line, _severity_from_string(issue.severity), issue.check_id, issue.message)
-
-		# Track signals
-		if trimmed.begins_with("signal "):
-			var signal_name := trimmed.substr(7).split("(")[0].strip_edges()
-			file_result.signals_found.append(signal_name)
-
-		# Track dependencies
-		if trimmed.begins_with("preload(") or trimmed.begins_with("load("):
-			var dep := _extract_string_arg(trimmed)
-			if dep:
-				file_result.dependencies.append(dep)
-
-		# Delegate to style checker
-		if config.check_magic_numbers:
-			var issue = _style_checker.check_magic_numbers(trimmed, line_num)
-			if issue:
-				_add_issue(file_path, issue.line, _severity_from_string(issue.severity), issue.check_id, issue.message)
-
-		if config.check_commented_code:
-			var issue = _style_checker.check_commented_code(trimmed, line_num)
-			if issue:
-				_add_issue(file_path, issue.line, _severity_from_string(issue.severity), issue.check_id, issue.message)
-
-		if config.check_missing_types:
-			var issue = _style_checker.check_variable_type_hints(trimmed, line_num)
-			if issue:
-				_add_issue(file_path, issue.line, _severity_from_string(issue.severity), issue.check_id, issue.message)
-
-		# Delegate to naming checker
+		# Naming convention checks
 		if config.check_naming_conventions:
-			var naming_issues = _naming_checker.check_line(line, line_num)
+			var naming_issues := _naming_checker.check_line(line, line_num)
 			for issue in naming_issues:
 				_add_issue(file_path, issue.line, _severity_from_string(issue.severity), issue.check_id, issue.message)
+
+
+func _check_file_length(file_path: String, line_count: int) -> void:
+	if line_count > config.line_limit_hard:
+		_add_issue(file_path, 1, IssueClass.Severity.CRITICAL, "file-length",
+			"File exceeds %d lines (%d)" % [config.line_limit_hard, line_count])
+	elif line_count > config.line_limit_soft:
+		_add_issue(file_path, 1, IssueClass.Severity.WARNING, "file-length",
+			"File exceeds %d lines (%d)" % [config.line_limit_soft, line_count])
 
 
 func _check_god_class(file_path: String, file_result) -> void:
@@ -290,10 +255,3 @@ func _calculate_debt_score(file_result) -> void:
 			score += 10
 
 	file_result.debt_score = score
-
-func _extract_string_arg(line: String) -> String:
-	var start := line.find("\"")
-	var end := line.rfind("\"")
-	if start >= 0 and end > start:
-		return line.substr(start + 1, end - start - 1)
-	return ""

@@ -294,10 +294,34 @@ func _on_settings_pressed() -> void:
 	$VBox/ScrollContainer.visible = not settings_panel.visible
 
 
-func _display_results() -> void:
-	if not current_result:
-		return
+func _matches_severity(issue) -> bool:
+	if current_severity_filter == "all":
+		return true
+	var Issue = IssueScript
+	match current_severity_filter:
+		"critical": return issue.severity == Issue.Severity.CRITICAL
+		"warning": return issue.severity == Issue.Severity.WARNING
+		"info": return issue.severity == Issue.Severity.INFO
+	return false
 
+
+func _matches_type(issue) -> bool:
+	return current_type_filter == "all" or issue.check_id == current_type_filter
+
+
+func _matches_file(issue) -> bool:
+	return current_file_filter == "" or current_file_filter in issue.file_path.to_lower()
+
+
+func _matches_current_filters(issue) -> bool:
+	return _matches_severity(issue) and _matches_type(issue) and _matches_file(issue)
+
+
+func _filter_issues(issues: Array) -> Array:
+	return issues.filter(_matches_current_filters)
+
+
+func _build_report_header() -> String:
 	var bbcode := "[b]Code Quality Report[/b]\n"
 	bbcode += "Files: %d | Lines: %d | Time: %dms\n" % [
 		current_result.files_analyzed,
@@ -313,83 +337,58 @@ func _display_results() -> void:
 	if summary_parts.size() > 0:
 		bbcode += " | ".join(summary_parts) + "\n"
 	bbcode += "\n"
+	return bbcode
 
-	var issues_to_show: Array = current_result.issues.duplicate()
+
+func _build_active_filters_text(count: int) -> String:
+	var active: Array[String] = []
+	if current_severity_filter != "all":
+		active.append(current_severity_filter.capitalize())
+	if current_type_filter != "all":
+		active.append(ISSUE_TYPES.get(current_type_filter, current_type_filter))
+	if current_file_filter != "":
+		active.append("\"%s\"" % current_file_filter)
+	if active.size() > 0:
+		return "[color=#888888]Filters: %s (%d matches)[/color]\n\n" % [", ".join(active), count]
+	return ""
+
+
+func _group_issues_by_severity(issues: Array) -> Dictionary:
 	var Issue = IssueScript
-
-	# Filter by severity
-	if current_severity_filter != "all":
-		var severity_filtered: Array = []
-		for issue in issues_to_show:
-			match current_severity_filter:
-				"critical":
-					if issue.severity == Issue.Severity.CRITICAL:
-						severity_filtered.append(issue)
-				"warning":
-					if issue.severity == Issue.Severity.WARNING:
-						severity_filtered.append(issue)
-				"info":
-					if issue.severity == Issue.Severity.INFO:
-						severity_filtered.append(issue)
-		issues_to_show = severity_filtered
-
-	# Filter by type
-	if current_type_filter != "all":
-		var type_filtered: Array = []
-		for issue in issues_to_show:
-			if issue.check_id == current_type_filter:
-				type_filtered.append(issue)
-		issues_to_show = type_filtered
-
-	# Filter by filename
-	if current_file_filter != "":
-		var filtered: Array = []
-		for issue in issues_to_show:
-			if current_file_filter in issue.file_path.to_lower():
-				filtered.append(issue)
-		issues_to_show = filtered
-
-	# Show active filters
-	var active_filters: Array[String] = []
-	if current_severity_filter != "all":
-		active_filters.append(current_severity_filter.capitalize())
-	if current_type_filter != "all":
-		active_filters.append(ISSUE_TYPES.get(current_type_filter, current_type_filter))
-	if current_file_filter != "":
-		active_filters.append("\"%s\"" % current_file_filter)
-
-	if active_filters.size() > 0:
-		bbcode += "[color=#888888]Filters: %s (%d matches)[/color]\n\n" % [", ".join(active_filters), issues_to_show.size()]
-
-	# Group by severity
-	var critical: Array = []
-	var warnings: Array = []
-	var info: Array = []
-
-	for issue in issues_to_show:
+	var grouped := {"critical": [], "warning": [], "info": []}
+	for issue in issues:
 		match issue.severity:
-			Issue.Severity.CRITICAL: critical.append(issue)
-			Issue.Severity.WARNING: warnings.append(issue)
-			Issue.Severity.INFO: info.append(issue)
+			Issue.Severity.CRITICAL: grouped.critical.append(issue)
+			Issue.Severity.WARNING: grouped.warning.append(issue)
+			Issue.Severity.INFO: grouped.info.append(issue)
+	return grouped
 
-	if critical.size() > 0:
-		bbcode += "[color=#ff6b6b][b]🔴 CRITICAL (%d)[/b][/color]\n" % critical.size()
-		bbcode += _format_issues_by_type(critical, "#ff6b6b")
-		bbcode += "\n"
 
-	if warnings.size() > 0:
-		bbcode += "[color=#ffd93d][b]🟡 WARNINGS (%d)[/b][/color]\n" % warnings.size()
-		bbcode += _format_issues_by_type(warnings, "#ffd93d")
-		bbcode += "\n"
+func _format_severity_section(issues: Array, label: String, emoji: String, color: String) -> String:
+	if issues.size() == 0:
+		return ""
+	var bbcode := "[color=%s][b]%s %s (%d)[/b][/color]\n" % [color, emoji, label, issues.size()]
+	bbcode += _format_issues_by_type(issues, color)
+	return bbcode + "\n"
 
-	if info.size() > 0:
-		bbcode += "[color=#6bcb77][b]🔵 INFO (%d)[/b][/color]\n" % info.size()
-		bbcode += _format_issues_by_type(info, "#6bcb77")
 
-	if issues_to_show.size() == 0:
+func _display_results() -> void:
+	if not current_result:
+		return
+
+	var bbcode := _build_report_header()
+	var filtered := _filter_issues(current_result.issues.duplicate())
+
+	bbcode += _build_active_filters_text(filtered.size())
+
+	var grouped := _group_issues_by_severity(filtered)
+	bbcode += _format_severity_section(grouped.critical, "CRITICAL", "🔴", "#ff6b6b")
+	bbcode += _format_severity_section(grouped.warning, "WARNINGS", "🟡", "#ffd93d")
+	bbcode += _format_severity_section(grouped.info, "INFO", "🔵", "#6bcb77")
+
+	if filtered.size() == 0:
 		bbcode += "[color=#888888]No issues matching current filters[/color]"
 
-	# Display ignored issues section
 	if settings_manager.show_ignored_issues:
 		bbcode += _format_ignored_section()
 
@@ -457,36 +456,15 @@ func _format_issue(issue, color: String) -> String:
 	return line + "\n"
 
 
+func _matches_severity_and_file(issue) -> bool:
+	return _matches_severity(issue) and _matches_file(issue)
+
+
 func _format_ignored_section() -> String:
 	if not current_result or current_result.ignored_issues.size() == 0:
 		return ""
 
-	var Issue = IssueScript
-	var ignored: Array = current_result.ignored_issues.duplicate()
-
-	# Filter by severity (same logic as main issues)
-	if current_severity_filter != "all":
-		var filtered: Array = []
-		for issue in ignored:
-			match current_severity_filter:
-				"critical":
-					if issue.severity == Issue.Severity.CRITICAL:
-						filtered.append(issue)
-				"warning":
-					if issue.severity == Issue.Severity.WARNING:
-						filtered.append(issue)
-				"info":
-					if issue.severity == Issue.Severity.INFO:
-						filtered.append(issue)
-		ignored = filtered
-
-	# Filter by file
-	if current_file_filter != "":
-		var filtered: Array = []
-		for issue in ignored:
-			if current_file_filter in issue.file_path.to_lower():
-				filtered.append(issue)
-		ignored = filtered
+	var ignored: Array = current_result.ignored_issues.filter(_matches_severity_and_file)
 
 	if ignored.size() == 0:
 		return ""

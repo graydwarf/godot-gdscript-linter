@@ -38,6 +38,7 @@ extends Resource
 
 # Scanning options
 @export var respect_gdignore: bool = true  # Skip directories containing .gdignore files
+@export var scan_addons: bool = false  # Include addons/ folder in scans (disabled by default)
 
 # Complexity thresholds
 @export var cyclomatic_warning: int = 10
@@ -157,6 +158,9 @@ func _apply_config_value(section: String, key: String, value: String) -> void:
 
 func is_path_excluded(path: String) -> bool:
 	for excluded in excluded_paths:
+		# Skip addons/ exclusion if scan_addons is enabled
+		if excluded == "addons/" and scan_addons:
+			continue
 		if path.contains(excluded):
 			return true
 	return false

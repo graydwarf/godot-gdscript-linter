@@ -49,6 +49,7 @@ var show_debt_check: CheckBox
 var show_json_export_check: CheckBox
 var show_html_export_check: CheckBox
 var respect_gdignore_check: CheckBox
+var scan_addons_check: CheckBox
 var max_lines_soft_spin: SpinBox
 var max_lines_hard_spin: SpinBox
 var max_func_lines_spin: SpinBox
@@ -59,6 +60,11 @@ var max_params_spin: SpinBox
 var max_nesting_spin: SpinBox
 var god_class_funcs_spin: SpinBox
 var god_class_signals_spin: SpinBox
+
+# Claude Code settings controls
+var claude_enabled_check: CheckBox
+var claude_command_edit: LineEdit
+var claude_reset_button: Button
 
 # State
 var current_result  # AnalysisResult instance
@@ -72,11 +78,33 @@ var show_debt: bool = true
 var show_json_export: bool = false
 var show_html_export: bool = true
 var respect_gdignore: bool = true  # Skip directories with .gdignore files
+var scan_addons: bool = false  # Include addons/ folder in scans (disabled by default)
+
+# Claude Code settings
+var claude_code_enabled: bool = false
+var claude_code_command: String = 'start cmd /k "cd /d {project_path} && claude"'
+const CLAUDE_CODE_DEFAULT_COMMAND := 'start cmd /k "cd /d {project_path} && claude"'
+
+# Analysis limits defaults
+const DEFAULT_FILE_LINES_SOFT := 200
+const DEFAULT_FILE_LINES_HARD := 300
+const DEFAULT_FUNC_LINES := 30
+const DEFAULT_FUNC_LINES_CRIT := 60
+const DEFAULT_COMPLEXITY_WARN := 10
+const DEFAULT_COMPLEXITY_CRIT := 15
+const DEFAULT_MAX_PARAMS := 4
+const DEFAULT_MAX_NESTING := 3
+const DEFAULT_GOD_CLASS_FUNCS := 20
+const DEFAULT_GOD_CLASS_SIGNALS := 10
 
 # Preload the analyzer scripts
 var CodeAnalyzerScript = preload("res://addons/godot-qube/analyzer/code-analyzer.gd")
 var AnalysisConfigScript = preload("res://addons/godot-qube/analyzer/analysis-config.gd")
 var IssueScript = preload("res://addons/godot-qube/analyzer/issue.gd")
+
+# Icons
+var _claude_icon: Texture2D
+var _reset_icon: Texture2D
 
 # Current config instance for settings
 var current_config: Resource
@@ -84,6 +112,10 @@ var current_config: Resource
 
 # qube:ignore-next-line - UI initialization requires many node references
 func _ready() -> void:
+	# Load icons
+	_claude_icon = load("res://addons/godot-qube/icons/sparkle.svg")
+	_reset_icon = load("res://addons/godot-qube/icons/arrow-reset.svg")
+
 	# Get node references
 	results_label = $VBox/ScrollContainer/ResultsLabel
 	scan_button = $VBox/Toolbar/ScanButton
@@ -98,6 +130,13 @@ func _ready() -> void:
 	if not results_label or not scan_button or not severity_filter:
 		push_error("Code Quality: Failed to find UI nodes")
 		return
+
+	# Darken the dock background
+	var bg := ColorRect.new()
+	bg.color = Color(0.12, 0.12, 0.14, 1.0)  # Darker gray background
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(bg)
+	move_child(bg, 0)  # Move to back
 
 	# Initialize config first (needed for settings cards)
 	current_config = AnalysisConfigScript.new()
@@ -124,8 +163,11 @@ func _ready() -> void:
 		show_json_export_check.toggled.connect(_on_show_json_export_toggled)
 	if show_html_export_check:
 		show_html_export_check.toggled.connect(_on_show_html_export_toggled)
+	# Connect spinbox signals for auto-save
 	if max_lines_soft_spin:
 		max_lines_soft_spin.value_changed.connect(_on_max_lines_soft_changed)
+	else:
+		push_error("Code Quality: max_lines_soft_spin is null!")
 	if max_lines_hard_spin:
 		max_lines_hard_spin.value_changed.connect(_on_max_lines_hard_changed)
 	if max_func_lines_spin:
@@ -144,6 +186,7 @@ func _ready() -> void:
 		god_class_funcs_spin.value_changed.connect(_on_god_class_funcs_changed)
 	if god_class_signals_spin:
 		god_class_signals_spin.value_changed.connect(_on_god_class_signals_changed)
+	print("Code Quality: Spinbox signals connected")
 
 	# Setup severity filter options
 	severity_filter.clear()
@@ -159,7 +202,6 @@ func _ready() -> void:
 	_load_settings()
 
 	export_button.disabled = true
-	html_export_button.disabled = true
 	settings_panel.visible = false
 
 	print("Code Quality: Plugin ready")
@@ -223,6 +265,8 @@ func _load_settings() -> void:
 	show_html_export = editor_settings.get_setting("code_quality/display/show_html_export") if editor_settings.has_setting("code_quality/display/show_html_export") else true
 	respect_gdignore = editor_settings.get_setting("code_quality/scanning/respect_gdignore") if editor_settings.has_setting("code_quality/scanning/respect_gdignore") else true
 	current_config.respect_gdignore = respect_gdignore
+	scan_addons = editor_settings.get_setting("code_quality/scanning/scan_addons") if editor_settings.has_setting("code_quality/scanning/scan_addons") else false
+	current_config.scan_addons = scan_addons
 
 	# Load analysis limits
 	current_config.line_limit_soft = editor_settings.get_setting("code_quality/limits/file_lines_warn") if editor_settings.has_setting("code_quality/limits/file_lines_warn") else 200
@@ -242,6 +286,7 @@ func _load_settings() -> void:
 	show_json_export_check.button_pressed = show_json_export
 	show_html_export_check.button_pressed = show_html_export
 	respect_gdignore_check.button_pressed = respect_gdignore
+	scan_addons_check.button_pressed = scan_addons
 	export_button.visible = show_json_export
 	html_export_button.visible = show_html_export
 
@@ -256,10 +301,19 @@ func _load_settings() -> void:
 	god_class_funcs_spin.value = current_config.god_class_functions
 	god_class_signals_spin.value = current_config.god_class_signals
 
+	# Load Claude Code settings
+	claude_code_enabled = editor_settings.get_setting("code_quality/claude/enabled") if editor_settings.has_setting("code_quality/claude/enabled") else false
+	claude_code_command = editor_settings.get_setting("code_quality/claude/launch_command") if editor_settings.has_setting("code_quality/claude/launch_command") else CLAUDE_CODE_DEFAULT_COMMAND
+
+	# Apply to UI
+	claude_enabled_check.button_pressed = claude_code_enabled
+	claude_command_edit.text = claude_code_command
+
 
 func _save_setting(key: String, value: Variant) -> void:
 	var editor_settings := EditorInterface.get_editor_settings()
 	editor_settings.set_setting(key, value)
+	print("Code Quality: Saved %s = %s" % [key, value])
 
 
 func _on_scan_pressed() -> void:
@@ -316,8 +370,10 @@ func _on_export_pressed() -> void:
 
 
 func _on_html_export_pressed() -> void:
+	# Create empty result if none exists yet
 	if not current_result:
-		return
+		var AnalysisResultScript = preload("res://addons/godot-qube/analyzer/analysis-result.gd")
+		current_result = AnalysisResultScript.new()
 
 	var html := _generate_html_report()
 	var export_path := "res://code_quality_report.html"
@@ -655,6 +711,12 @@ func _on_respect_gdignore_toggled(pressed: bool) -> void:
 	_save_setting("code_quality/scanning/respect_gdignore", pressed)
 
 
+func _on_scan_addons_toggled(pressed: bool) -> void:
+	scan_addons = pressed
+	current_config.scan_addons = pressed
+	_save_setting("code_quality/scanning/scan_addons", pressed)
+
+
 func _on_max_lines_soft_changed(value: float) -> void:
 	current_config.line_limit_soft = int(value)
 	_save_setting("code_quality/limits/file_lines_warn", int(value))
@@ -703,6 +765,24 @@ func _on_god_class_funcs_changed(value: float) -> void:
 func _on_god_class_signals_changed(value: float) -> void:
 	current_config.god_class_signals = int(value)
 	_save_setting("code_quality/limits/god_class_signals", int(value))
+
+
+func _on_claude_enabled_toggled(pressed: bool) -> void:
+	claude_code_enabled = pressed
+	_save_setting("code_quality/claude/enabled", pressed)
+	if current_result:
+		_display_results()
+
+
+func _on_claude_command_changed(new_text: String) -> void:
+	claude_code_command = new_text
+	_save_setting("code_quality/claude/launch_command", new_text)
+
+
+func _on_claude_reset_pressed() -> void:
+	claude_code_command = CLAUDE_CODE_DEFAULT_COMMAND
+	claude_command_edit.text = CLAUDE_CODE_DEFAULT_COMMAND
+	_save_setting("code_quality/claude/launch_command", CLAUDE_CODE_DEFAULT_COMMAND)
 
 
 # qube:ignore-next-line - Results display requires formatting for all issue types
@@ -855,13 +935,57 @@ func _format_issue(issue, color: String) -> String:
 	var short_path: String = issue.file_path.get_file()
 	var link := "%s:%d" % [issue.file_path, issue.line]
 
-	return "    [url=%s][color=%s]%s:%d[/color][/url] %s\n" % [
+	var line := "    [url=%s][color=%s]%s:%d[/color][/url] %s" % [
 		link, color, short_path, issue.line, issue.message
 	]
+
+	# Add Claude Code button if enabled
+	if claude_code_enabled:
+		var severity_str: String = "unknown"
+		var Issue = IssueScript
+		match issue.severity:
+			Issue.Severity.CRITICAL:
+				severity_str = "critical"
+			Issue.Severity.WARNING:
+				severity_str = "warning"
+			Issue.Severity.INFO:
+				severity_str = "info"
+
+		# Encode issue data in URL (use | as separator since it's URL-safe)
+		var claude_data := "%s|%d|%s|%s|%s" % [
+			issue.file_path,
+			issue.line,
+			issue.check_id,
+			severity_str,
+			issue.message.replace("|", "-")  # Escape any | in message
+		]
+		line += " [url=claude://%s][img=16x16]res://addons/godot-qube/icons/sparkle.svg[/img][/url]" % claude_data.uri_encode()
+
+	return line + "\n"
 
 
 func _on_link_clicked(meta: Variant) -> void:
 	var location := str(meta)
+
+	# Handle Claude Code links
+	if location.begins_with("claude://"):
+		var encoded_data: String = location.substr(9)  # Remove "claude://"
+		var decoded_data: String = encoded_data.uri_decode()
+		var parts := decoded_data.split("|")
+
+		if parts.size() >= 5:
+			var issue_data := {
+				"file_path": parts[0],
+				"line": int(parts[1]),
+				"check_id": parts[2],
+				"severity": parts[3],
+				"message": parts[4]
+			}
+			_on_claude_button_pressed(issue_data)
+		else:
+			push_warning("Invalid Claude link format: %s" % location)
+		return
+
 	print("Code Quality: Link clicked - %s" % location)
 
 	var parts := location.rsplit(":", true, 1)
@@ -880,6 +1004,33 @@ func _on_link_clicked(meta: Variant) -> void:
 		EditorInterface.set_main_screen_editor("Script")
 	else:
 		push_warning("Could not load script: %s" % file_path)
+
+
+# Launch Claude Code with issue context
+func _on_claude_button_pressed(issue: Dictionary) -> void:
+	var project_path := ProjectSettings.globalize_path("res://")
+
+	# Build the prompt with issue details
+	var prompt := "Code quality issue to fix:\n\n"
+	prompt += "File: %s\n" % issue.file_path
+	prompt += "Line: %d\n" % issue.line
+	prompt += "Type: %s\n" % issue.check_id
+	prompt += "Severity: %s\n" % issue.severity
+	prompt += "Message: %s\n\n" % issue.message
+	prompt += "Please analyze this issue and suggest a fix."
+
+	# Escape single quotes for PowerShell
+	var escaped_prompt := prompt.replace("'", "''")
+
+	print("Code Quality: Launching Claude Code for %s:%d" % [issue.file_path, issue.line])
+
+	# Launch via Windows Terminal with prompt in plan mode (read-only analysis)
+	var args: PackedStringArray = [
+		"-d", project_path,
+		"powershell", "-NoProfile", "-NoExit",
+		"-Command", "claude --permission-mode plan '%s'" % escaped_prompt
+	]
+	OS.create_process("wt", args)
 
 
 # ========== Settings Card UI ==========
@@ -982,6 +1133,10 @@ func _setup_settings_cards() -> void:
 	var limits_card := _create_limits_card()
 	cards_vbox.add_child(limits_card)
 
+	# Create Claude Code card
+	var claude_card := _create_claude_code_card()
+	cards_vbox.add_child(claude_card)
+
 	# Create About card
 	var about_card := _create_about_card()
 	cards_vbox.add_child(about_card)
@@ -1053,6 +1208,13 @@ func _create_display_options_card() -> PanelContainer:
 	respect_gdignore_check.toggled.connect(_on_respect_gdignore_toggled)
 	hbox2.add_child(respect_gdignore_check)
 
+	scan_addons_check = CheckBox.new()
+	scan_addons_check.text = "Scan addons/"
+	scan_addons_check.tooltip_text = "Include addons/ folder in code quality scans (disabled by default)"
+	scan_addons_check.button_pressed = scan_addons
+	scan_addons_check.toggled.connect(_on_scan_addons_toggled)
+	hbox2.add_child(scan_addons_check)
+
 	return card
 
 
@@ -1072,45 +1234,57 @@ func _create_limits_card() -> PanelContainer:
 	vbox.add_theme_constant_override("separation", 8)
 	card.add_child(vbox)
 
-	# Header
+	# Header row with Reset All button
+	var header_row := HBoxContainer.new()
+	header_row.add_theme_constant_override("separation", 8)
+	vbox.add_child(header_row)
+
 	var header := Label.new()
 	header.text = "Analysis Limits"
 	header.add_theme_font_size_override("font_size", 15)
 	header.add_theme_color_override("font_color", Color(0.9, 0.92, 0.95))
-	vbox.add_child(header)
+	header_row.add_child(header)
 
-	# Grid for spinboxes (4 columns: label, spin, label, spin)
+	var reset_all_btn := Button.new()
+	reset_all_btn.icon = _reset_icon
+	reset_all_btn.tooltip_text = "Reset all limits to defaults"
+	reset_all_btn.flat = true
+	reset_all_btn.custom_minimum_size = Vector2(16, 16)
+	reset_all_btn.pressed.connect(_on_reset_all_limits_pressed)
+	header_row.add_child(reset_all_btn)
+
+	# Grid for spinboxes (6 columns: label, spin, reset, label, spin, reset)
 	var grid := GridContainer.new()
-	grid.columns = 4
-	grid.add_theme_constant_override("h_separation", 10)
+	grid.columns = 6
+	grid.add_theme_constant_override("h_separation", 6)
 	grid.add_theme_constant_override("v_separation", 6)
 	vbox.add_child(grid)
 
 	# Row 1: File lines soft/hard
-	max_lines_soft_spin = _add_spin_row(grid, "File Lines (warn):", 50, 1000, current_config.line_limit_soft if current_config else 200)
-	max_lines_hard_spin = _add_spin_row(grid, "File Lines (crit):", 100, 2000, current_config.line_limit_hard if current_config else 300)
+	max_lines_soft_spin = _add_spin_row(grid, "File Lines (warn):", 50, 1000, current_config.line_limit_soft if current_config else DEFAULT_FILE_LINES_SOFT, DEFAULT_FILE_LINES_SOFT)
+	max_lines_hard_spin = _add_spin_row(grid, "File Lines (crit):", 100, 2000, current_config.line_limit_hard if current_config else DEFAULT_FILE_LINES_HARD, DEFAULT_FILE_LINES_HARD)
 
 	# Row 2: Function lines / complexity warning
-	max_func_lines_spin = _add_spin_row(grid, "Func Lines:", 10, 200, current_config.function_line_limit if current_config else 30)
-	max_complexity_spin = _add_spin_row(grid, "Complexity (warn):", 5, 50, current_config.cyclomatic_warning if current_config else 10)
+	max_func_lines_spin = _add_spin_row(grid, "Func Lines:", 10, 200, current_config.function_line_limit if current_config else DEFAULT_FUNC_LINES, DEFAULT_FUNC_LINES)
+	max_complexity_spin = _add_spin_row(grid, "Complexity (warn):", 5, 50, current_config.cyclomatic_warning if current_config else DEFAULT_COMPLEXITY_WARN, DEFAULT_COMPLEXITY_WARN)
 
 	# Row 3: Func lines critical / complexity critical
-	func_lines_crit_spin = _add_spin_row(grid, "Func Lines (crit):", 20, 300, current_config.function_line_critical if current_config else 60)
-	max_complexity_crit_spin = _add_spin_row(grid, "Complexity (crit):", 5, 50, current_config.cyclomatic_critical if current_config else 15)
+	func_lines_crit_spin = _add_spin_row(grid, "Func Lines (crit):", 20, 300, current_config.function_line_critical if current_config else DEFAULT_FUNC_LINES_CRIT, DEFAULT_FUNC_LINES_CRIT)
+	max_complexity_crit_spin = _add_spin_row(grid, "Complexity (crit):", 5, 50, current_config.cyclomatic_critical if current_config else DEFAULT_COMPLEXITY_CRIT, DEFAULT_COMPLEXITY_CRIT)
 
 	# Row 4: Max params / nesting
-	max_params_spin = _add_spin_row(grid, "Max Params:", 2, 15, current_config.max_parameters if current_config else 4)
-	max_nesting_spin = _add_spin_row(grid, "Max Nesting:", 2, 10, current_config.max_nesting if current_config else 3)
+	max_params_spin = _add_spin_row(grid, "Max Params:", 2, 15, current_config.max_parameters if current_config else DEFAULT_MAX_PARAMS, DEFAULT_MAX_PARAMS)
+	max_nesting_spin = _add_spin_row(grid, "Max Nesting:", 2, 10, current_config.max_nesting if current_config else DEFAULT_MAX_NESTING, DEFAULT_MAX_NESTING)
 
 	# Row 5: God class thresholds
-	god_class_funcs_spin = _add_spin_row(grid, "God Class Funcs:", 5, 50, current_config.god_class_functions if current_config else 20)
-	god_class_signals_spin = _add_spin_row(grid, "God Class Signals:", 3, 30, current_config.god_class_signals if current_config else 10)
+	god_class_funcs_spin = _add_spin_row(grid, "God Class Funcs:", 5, 50, current_config.god_class_functions if current_config else DEFAULT_GOD_CLASS_FUNCS, DEFAULT_GOD_CLASS_FUNCS)
+	god_class_signals_spin = _add_spin_row(grid, "God Class Signals:", 3, 30, current_config.god_class_signals if current_config else DEFAULT_GOD_CLASS_SIGNALS, DEFAULT_GOD_CLASS_SIGNALS)
 
 	return card
 
 
-# Helper to add a label + spinbox pair to a grid
-func _add_spin_row(grid: GridContainer, label_text: String, min_val: int, max_val: int, default_val: int) -> SpinBox:
+# Helper to add a label + spinbox + reset button to a grid
+func _add_spin_row(grid: GridContainer, label_text: String, min_val: int, max_val: int, current_val: int, default_val: int) -> SpinBox:
 	var label := Label.new()
 	label.text = label_text
 	label.add_theme_color_override("font_color", Color(0.7, 0.72, 0.75))
@@ -1119,8 +1293,101 @@ func _add_spin_row(grid: GridContainer, label_text: String, min_val: int, max_va
 	var spin := SpinBox.new()
 	spin.min_value = min_val
 	spin.max_value = max_val
-	spin.value = default_val
+	spin.value = current_val
 	spin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	grid.add_child(spin)
 
+	var reset_btn := Button.new()
+	reset_btn.icon = _reset_icon
+	reset_btn.tooltip_text = "Reset to default (%d)" % default_val
+	reset_btn.flat = true
+	reset_btn.custom_minimum_size = Vector2(16, 16)
+	reset_btn.pressed.connect(func(): spin.value = default_val)
+	grid.add_child(reset_btn)
+
 	return spin
+
+
+# Reset all analysis limits to defaults
+func _on_reset_all_limits_pressed() -> void:
+	max_lines_soft_spin.value = DEFAULT_FILE_LINES_SOFT
+	max_lines_hard_spin.value = DEFAULT_FILE_LINES_HARD
+	max_func_lines_spin.value = DEFAULT_FUNC_LINES
+	func_lines_crit_spin.value = DEFAULT_FUNC_LINES_CRIT
+	max_complexity_spin.value = DEFAULT_COMPLEXITY_WARN
+	max_complexity_crit_spin.value = DEFAULT_COMPLEXITY_CRIT
+	max_params_spin.value = DEFAULT_MAX_PARAMS
+	max_nesting_spin.value = DEFAULT_MAX_NESTING
+	god_class_funcs_spin.value = DEFAULT_GOD_CLASS_FUNCS
+	god_class_signals_spin.value = DEFAULT_GOD_CLASS_SIGNALS
+
+
+# Create Claude Code settings card
+# qube:ignore-next-line - UI card creation requires many style and layout calls
+func _create_claude_code_card() -> PanelContainer:
+	var card := PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.15, 0.17, 0.22, 0.9)
+	style.border_color = Color(0.3, 0.35, 0.45, 0.5)
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(6)
+	style.set_content_margin_all(12)
+	card.add_theme_stylebox_override("panel", style)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 8)
+	card.add_child(vbox)
+
+	# Header
+	var header := Label.new()
+	header.text = "Claude Code Integration"
+	header.add_theme_font_size_override("font_size", 15)
+	header.add_theme_color_override("font_color", Color(0.9, 0.92, 0.95))
+	vbox.add_child(header)
+
+	# Enable checkbox
+	claude_enabled_check = CheckBox.new()
+	claude_enabled_check.text = "Enable Claude Code buttons"
+	claude_enabled_check.button_pressed = claude_code_enabled
+	claude_enabled_check.toggled.connect(_on_claude_enabled_toggled)
+	vbox.add_child(claude_enabled_check)
+
+	# Description
+	var desc := Label.new()
+	desc.text = "Adds AI buttons to scan results for launching Claude Code with issue context."
+	desc.add_theme_font_size_override("font_size", 11)
+	desc.add_theme_color_override("font_color", Color(0.5, 0.52, 0.55))
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	vbox.add_child(desc)
+
+	# Command label
+	var cmd_label := Label.new()
+	cmd_label.text = "Launch Command:"
+	cmd_label.add_theme_color_override("font_color", Color(0.7, 0.72, 0.75))
+	vbox.add_child(cmd_label)
+
+	# Command input with reset button
+	var cmd_hbox := HBoxContainer.new()
+	cmd_hbox.add_theme_constant_override("separation", 8)
+	vbox.add_child(cmd_hbox)
+
+	claude_command_edit = LineEdit.new()
+	claude_command_edit.text = claude_code_command
+	claude_command_edit.placeholder_text = CLAUDE_CODE_DEFAULT_COMMAND
+	claude_command_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	claude_command_edit.text_changed.connect(_on_claude_command_changed)
+	cmd_hbox.add_child(claude_command_edit)
+
+	claude_reset_button = Button.new()
+	claude_reset_button.text = "Reset"
+	claude_reset_button.pressed.connect(_on_claude_reset_pressed)
+	cmd_hbox.add_child(claude_reset_button)
+
+	# Placeholder hint
+	var hint := Label.new()
+	hint.text = "Use {project_path} as placeholder for the project directory."
+	hint.add_theme_font_size_override("font_size", 10)
+	hint.add_theme_color_override("font_color", Color(0.45, 0.47, 0.5))
+	vbox.add_child(hint)
+
+	return card

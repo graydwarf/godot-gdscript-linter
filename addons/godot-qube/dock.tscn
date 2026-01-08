@@ -20,10 +20,20 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
+[node name="TopSpacer" type="Control" parent="VBox"]
+custom_minimum_size = Vector2(0, 3)
+layout_mode = 2
+
 [node name="Toolbar" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="LeftSpacer" type="Control" parent="VBox/Toolbar"]
+custom_minimum_size = Vector2(3, 0)
 layout_mode = 2
 
 [node name="ScanButton" type="Button" parent="VBox/Toolbar"]
+custom_minimum_size = Vector2(85, 0)
 layout_mode = 2
 text = "Scan"
 
@@ -105,7 +115,6 @@ text = "Export JSON"
 
 [node name="HTMLExportButton" type="Button" parent="VBox/Toolbar"]
 layout_mode = 2
-disabled = true
 text = "Export HTML"
 
 [node name="SettingsButton" type="Button" parent="VBox/Toolbar"]
@@ -117,6 +126,7 @@ flat = true
 [node name="SettingsPanel" type="PanelContainer" parent="VBox"]
 visible = false
 layout_mode = 2
+size_flags_vertical = 3
 
 [node name="ScrollContainer" type="ScrollContainer" parent="VBox"]
 layout_mode = 2

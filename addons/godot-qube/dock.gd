@@ -82,8 +82,8 @@ var scan_addons: bool = false  # Include addons/ folder in scans (disabled by de
 
 # Claude Code settings
 var claude_code_enabled: bool = false
-var claude_code_command: String = 'start cmd /k "cd /d {project_path} && claude"'
-const CLAUDE_CODE_DEFAULT_COMMAND := 'start cmd /k "cd /d {project_path} && claude"'
+var claude_code_command: String = "claude --permission-mode plan"
+const CLAUDE_CODE_DEFAULT_COMMAND := "claude --permission-mode plan"
 
 # Analysis limits defaults
 const DEFAULT_FILE_LINES_SOFT := 200
@@ -113,7 +113,7 @@ var current_config: Resource
 # qube:ignore-next-line - UI initialization requires many node references
 func _ready() -> void:
 	# Load icons
-	_claude_icon = load("res://addons/godot-qube/icons/sparkle.svg")
+	_claude_icon = load("res://addons/godot-qube/icons/claude.png")
 	_reset_icon = load("res://addons/godot-qube/icons/arrow-reset.svg")
 
 	# Get node references
@@ -144,7 +144,8 @@ func _ready() -> void:
 	# Build settings panel with cards (creates all settings controls)
 	_setup_settings_cards()
 
-	# Connect signals
+	# Connect signals - disable visual artifacts on links
+	results_label.meta_underlined = false
 	results_label.meta_clicked.connect(_on_link_clicked)
 	scan_button.pressed.connect(_on_scan_pressed)
 	export_button.pressed.connect(_on_export_pressed)
@@ -304,8 +305,6 @@ func _load_settings() -> void:
 	# Load Claude Code settings
 	claude_code_enabled = editor_settings.get_setting("code_quality/claude/enabled") if editor_settings.has_setting("code_quality/claude/enabled") else false
 	claude_code_command = editor_settings.get_setting("code_quality/claude/launch_command") if editor_settings.has_setting("code_quality/claude/launch_command") else CLAUDE_CODE_DEFAULT_COMMAND
-
-	# Apply to UI
 	claude_enabled_check.button_pressed = claude_code_enabled
 	claude_command_edit.text = claude_code_command
 
@@ -959,7 +958,8 @@ func _format_issue(issue, color: String) -> String:
 			severity_str,
 			issue.message.replace("|", "-")  # Escape any | in message
 		]
-		line += " [url=claude://%s][img=16x16]res://addons/godot-qube/icons/sparkle.svg[/img][/url]" % claude_data.uri_encode()
+		# Use invisible padding character to avoid URL styling artifacts
+		line += " [url=claude://%s][img=20x20]res://addons/godot-qube/icons/claude.png[/img][/url]" % claude_data.uri_encode()
 
 	return line + "\n"
 
@@ -1017,18 +1017,18 @@ func _on_claude_button_pressed(issue: Dictionary) -> void:
 	prompt += "Type: %s\n" % issue.check_id
 	prompt += "Severity: %s\n" % issue.severity
 	prompt += "Message: %s\n\n" % issue.message
-	prompt += "Please analyze this issue and suggest a fix."
+	prompt += "Analyze this issue and suggest a fix."
 
 	# Escape single quotes for PowerShell
 	var escaped_prompt := prompt.replace("'", "''")
 
 	print("Code Quality: Launching Claude Code for %s:%d" % [issue.file_path, issue.line])
 
-	# Launch via Windows Terminal with prompt in plan mode (read-only analysis)
+	# Launch via Windows Terminal with customizable command
 	var args: PackedStringArray = [
 		"-d", project_path,
 		"powershell", "-NoProfile", "-NoExit",
-		"-Command", "claude --permission-mode plan '%s'" % escaped_prompt
+		"-Command", "%s '%s'" % [claude_code_command, escaped_prompt]
 	]
 	OS.create_process("wt", args)
 
@@ -1354,7 +1354,7 @@ func _create_claude_code_card() -> PanelContainer:
 
 	# Description
 	var desc := Label.new()
-	desc.text = "Adds AI buttons to scan results for launching Claude Code with issue context."
+	desc.text = "Adds AI buttons to scan results for launching Claude Code with issue context. Requires claude-code installed & setup."
 	desc.add_theme_font_size_override("font_size", 11)
 	desc.add_theme_color_override("font_color", Color(0.5, 0.52, 0.55))
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1379,15 +1379,11 @@ func _create_claude_code_card() -> PanelContainer:
 	cmd_hbox.add_child(claude_command_edit)
 
 	claude_reset_button = Button.new()
-	claude_reset_button.text = "Reset"
+	claude_reset_button.icon = _reset_icon
+	claude_reset_button.tooltip_text = "Reset to default"
+	claude_reset_button.flat = true
+	claude_reset_button.custom_minimum_size = Vector2(16, 16)
 	claude_reset_button.pressed.connect(_on_claude_reset_pressed)
 	cmd_hbox.add_child(claude_reset_button)
-
-	# Placeholder hint
-	var hint := Label.new()
-	hint.text = "Use {project_path} as placeholder for the project directory."
-	hint.add_theme_font_size_override("font_size", 10)
-	hint.add_theme_color_override("font_color", Color(0.45, 0.47, 0.5))
-	vbox.add_child(hint)
 
 	return card

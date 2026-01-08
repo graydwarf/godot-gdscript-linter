@@ -1,9 +1,11 @@
 # Godot Qube
 
-![Version](https://img.shields.io/badge/version-1.1.2-blue.svg)
+![Version](https://img.shields.io/badge/version-1.1.3-blue.svg)
 ![Godot](https://img.shields.io/badge/Godot-4.0%2B-blue.svg)
 
 A static code analysis plugin for GDScript that helps you maintain code quality, identify technical debt, and enforce best practices in your Godot 4.x projects.
+
+Runs in seconds with no external dependencies. Can help reduce token usage on large projects.
 
 <p align="center">
   <img src="screenshots/godot-qube.png" width="700" alt="Godot Qube Editor Dock">
@@ -53,6 +55,16 @@ A static code analysis plugin for GDScript that helps you maintain code quality,
 <p align="center">
   <img src="screenshots/godot-qube-html.png" width="700" alt="Godot Qube HTML Report">
 </p>
+
+### Claude Code Integration
+
+Launch [Claude Code](https://claude.ai/code) directly from scan results to get AI-assisted fixes:
+
+- Enable in Settings > Claude Code Integration
+- Click the Claude icon next to any issue to launch Claude Code in plan mode
+- Issue context (file, line, type, message) is passed automatically
+- Add custom instructions to customize the AI prompt
+- Requires [claude-code CLI](https://github.com/anthropics/claude-code) installed
 
 ### CLI Support
 

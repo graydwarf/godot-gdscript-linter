@@ -95,6 +95,7 @@ func _add_instructions_section(parent: VBoxContainer, controls: Dictionary) -> v
 
 	controls.claude_instructions_edit = TextEdit.new()
 	controls.claude_instructions_edit.placeholder_text = "Add extra instructions to append to the prompt..."
-	controls.claude_instructions_edit.custom_minimum_size = Vector2(0, 60)
+	controls.claude_instructions_edit.custom_minimum_size = Vector2(0, 120)
 	controls.claude_instructions_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	controls.claude_instructions_edit.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
 	parent.add_child(controls.claude_instructions_edit)

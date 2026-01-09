@@ -20,6 +20,7 @@ code_quality_report.html
 
 # Local state
 .gdlint_state.json
+.gdqube_state.json
 
 # Claude Code (user-specific)
 .claude/

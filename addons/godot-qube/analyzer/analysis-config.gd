@@ -112,48 +112,56 @@ func load_project_config(project_path: String = "res://") -> void:
 
 func _apply_config_value(section: String, key: String, value: String) -> void:
 	match section:
-		"limits":
-			match key:
-				"file_lines_soft": line_limit_soft = int(value)
-				"file_lines_hard": line_limit_hard = int(value)
-				"function_lines": function_line_limit = int(value)
-				"function_lines_critical": function_line_critical = int(value)
-				"max_parameters": max_parameters = int(value)
-				"max_nesting": max_nesting = int(value)
-				"max_line_length": max_line_length = int(value)
-				"cyclomatic_warning": cyclomatic_warning = int(value)
-				"cyclomatic_critical": cyclomatic_critical = int(value)
-				"god_class_functions": god_class_functions = int(value)
-				"god_class_signals": god_class_signals = int(value)
-		"checks":
-			var enabled := value.to_lower() in ["true", "1", "yes", "on"]
-			match key:
-				"file_length": check_file_length = enabled
-				"function_length": check_function_length = enabled
-				"cyclomatic_complexity": check_cyclomatic_complexity = enabled
-				"parameters": check_parameters = enabled
-				"nesting": check_nesting = enabled
-				"todo_comments": check_todo_comments = enabled
-				"print_statements": check_print_statements = enabled
-				"empty_functions": check_empty_functions = enabled
-				"magic_numbers": check_magic_numbers = enabled
-				"commented_code": check_commented_code = enabled
-				"missing_types": check_missing_types = enabled
-				"god_class": check_god_class = enabled
-				"long_lines": check_long_lines = enabled
-				"naming_conventions": check_naming_conventions = enabled
-				"unused_variables": check_unused_variables = enabled
-				"unused_parameters": check_unused_parameters = enabled
-				"ignore_underscore_prefix": ignore_underscore_prefix = enabled
-				"respect_gdignore": respect_gdignore = enabled
-		"exclude":
-			if key == "paths":
-				# Parse comma-separated list
-				excluded_paths.clear()
-				for path in value.split(","):
-					var trimmed := path.strip_edges()
-					if not trimmed.is_empty():
-						excluded_paths.append(trimmed)
+		"limits": _apply_limits_value(key, value)
+		"checks": _apply_checks_value(key, value)
+		"exclude": _apply_exclude_value(key, value)
+
+
+func _apply_limits_value(key: String, value: String) -> void:
+	match key:
+		"file_lines_soft": line_limit_soft = int(value)
+		"file_lines_hard": line_limit_hard = int(value)
+		"function_lines": function_line_limit = int(value)
+		"function_lines_critical": function_line_critical = int(value)
+		"max_parameters": max_parameters = int(value)
+		"max_nesting": max_nesting = int(value)
+		"max_line_length": max_line_length = int(value)
+		"cyclomatic_warning": cyclomatic_warning = int(value)
+		"cyclomatic_critical": cyclomatic_critical = int(value)
+		"god_class_functions": god_class_functions = int(value)
+		"god_class_signals": god_class_signals = int(value)
+
+
+func _apply_checks_value(key: String, value: String) -> void:
+	var enabled := value.to_lower() in ["true", "1", "yes", "on"]
+	match key:
+		"file_length": check_file_length = enabled
+		"function_length": check_function_length = enabled
+		"cyclomatic_complexity": check_cyclomatic_complexity = enabled
+		"parameters": check_parameters = enabled
+		"nesting": check_nesting = enabled
+		"todo_comments": check_todo_comments = enabled
+		"print_statements": check_print_statements = enabled
+		"empty_functions": check_empty_functions = enabled
+		"magic_numbers": check_magic_numbers = enabled
+		"commented_code": check_commented_code = enabled
+		"missing_types": check_missing_types = enabled
+		"god_class": check_god_class = enabled
+		"long_lines": check_long_lines = enabled
+		"naming_conventions": check_naming_conventions = enabled
+		"unused_variables": check_unused_variables = enabled
+		"unused_parameters": check_unused_parameters = enabled
+		"ignore_underscore_prefix": ignore_underscore_prefix = enabled
+		"respect_gdignore": respect_gdignore = enabled
+
+
+func _apply_exclude_value(key: String, value: String) -> void:
+	if key == "paths":
+		excluded_paths.clear()
+		for path in value.split(","):
+			var trimmed := path.strip_edges()
+			if not trimmed.is_empty():
+				excluded_paths.append(trimmed)
 
 
 func is_path_excluded(path: String) -> bool:

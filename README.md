@@ -1,6 +1,6 @@
 # Godot Qube
 
-![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)
 ![Godot](https://img.shields.io/badge/Godot-4.0%2B-blue.svg)
 
 A static code analysis plugin for GDScript that helps you maintain code quality, identify technical debt, and enforce best practices in your Godot 4.x projects.

@@ -9,7 +9,7 @@ signal setting_changed(key: String, value: Variant)
 signal display_refresh_needed
 
 const CLAUDE_CODE_DEFAULT_COMMAND := "claude --permission-mode plan"
-const CLAUDE_CODE_DEFAULT_INSTRUCTIONS := "When analyzing issues, recommend the best solution - which may be a qube:ignore directive instead of refactoring. If code is clean and readable but slightly over a limit, suggest adding an ignore comment rather than restructuring working code. Always explain why you're recommending a refactor vs an ignore directive."
+const CLAUDE_CODE_DEFAULT_INSTRUCTIONS := "When analyzing issues, recommend the best solution - which may be a qube:ignore directive instead of refactoring. If code is clean and readable but slightly over a limit, suggest adding an ignore comment rather than restructuring working code. Always explain why you're recommending a refactor vs an ignore directive. IMPORTANT: Before adding any ignore directive, read addons/godot-qube/IGNORE_RULES.md for correct syntax and available directive types."
 
 # Settings state
 var show_total_issues: bool = true

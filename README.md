@@ -1,6 +1,6 @@
 # Godot Qube
 
-![Version](https://img.shields.io/badge/version-1.1.3-blue.svg)
+![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)
 ![Godot](https://img.shields.io/badge/Godot-4.0%2B-blue.svg)
 
 A static code analysis plugin for GDScript that helps you maintain code quality, identify technical debt, and enforce best practices in your Godot 4.x projects.
@@ -90,6 +90,9 @@ godot --headless --path /path/to/godot-qube --script res://addons/godot-qube/ana
 godot --headless --script res://addons/godot-qube/analyzer/analyze-cli.gd -- --clickable  # Godot Output panel format
 godot --headless --script res://addons/godot-qube/analyzer/analyze-cli.gd -- --json       # JSON format
 godot --headless --script res://addons/godot-qube/analyzer/analyze-cli.gd -- --html -o report.html  # HTML report
+
+# Audit mode - bypass all ignore directives
+godot --headless --script res://addons/godot-qube/analyzer/analyze-cli.gd -- --no-ignore
 ```
 
 **Exit Codes:**
@@ -137,6 +140,23 @@ Suppress warnings for intentional code patterns using inline comments:
 | `qube:ignore`                  | Same line       |
 
 All directives support optional check IDs: `# qube:ignore:magic-number,print-statement`
+
+#### Pinned Exceptions
+
+Track technical debt regression by pinning numeric values:
+
+```gdscript
+# qube:ignore-function:long-function=35
+func my_complex_function():
+    # Function is 35 lines - pinned at this value
+```
+
+| Scenario | Result |
+|----------|--------|
+| Actual matches pinned (35 = 35) | Silently ignored |
+| Actual exceeds pinned (35 → 40) | ⚠️ Warning: "exceeded pinned limit" |
+| Actual improved (35 → 32, still > 30) | ℹ️ Info: "consider tightening" |
+| Actual now within limit (35 → 25) | ℹ️ Info: "pinned ignore is now unnecessary" |
 
 See **[IGNORE_RULES.md](addons/godot-qube/IGNORE_RULES.md)** for full syntax reference and examples.
 

@@ -83,6 +83,36 @@ var limit = 5000
 # qube:ignore-block-end
 ```
 
+## Pinned Exceptions
+
+Track technical debt regression by pinning a value. If the actual value exceeds the pinned value, you'll get a warning about the regression.
+
+```gdscript
+# Pin function at 35 lines - warns if it grows beyond 35
+# qube:ignore-function:long-function=35
+func my_complex_function() -> void:
+    # ... 35 lines of code ...
+
+# Pin file at 400 lines
+# qube:ignore-file:file-length=400
+
+# Pin complexity at 12
+# qube:ignore-next-line:high-complexity=12
+func branchy_logic() -> void:
+    # ...
+```
+
+**Behavior:**
+
+| Scenario | Result |
+|----------|--------|
+| Actual = Pinned (35 = 35) | Silently ignored |
+| Actual > Pinned (35 → 40) | Warning: "exceeded pinned limit (35 → 40, limit is 30)" |
+| Actual < Pinned but > limit (40 → 35, limit 30) | Info: "now 35 (was pinned at 40) - consider tightening" |
+| Actual < limit (35 → 25, limit 30) | Info: "pinned ignore is now unnecessary" |
+
+This helps you catch regressions while still allowing intentional exceptions to your normal limits.
+
 ## Common Rule Names
 
 | Rule ID | Description |

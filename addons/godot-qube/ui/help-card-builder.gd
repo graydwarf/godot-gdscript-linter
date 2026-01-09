@@ -81,6 +81,10 @@ func _add_ignore_rules_section(parent: VBoxContainer) -> void:
 	_add_ignore_example(parent, "qube:ignore",
 		"var magic = 42  # qube:ignore\nvar x = 100  # qube:ignore:magic-number")
 
+	_add_thin_separator(parent)
+	_add_ignore_example(parent, "Pinned Exceptions (=value)",
+		"# qube:ignore-function:long-function=35\nfunc complex(): ...  # Warns if exceeds 35 lines")
+
 
 func _add_ignore_table(parent: VBoxContainer) -> void:
 	var grid := GridContainer.new()
@@ -143,6 +147,7 @@ func _add_cli_section(parent: VBoxContainer) -> void:
 		["--clickable", "Godot Output panel (default)"],
 		["--json", "JSON format"],
 		["--html -o file.html", "HTML report"],
+		["--no-ignore", "Bypass all ignore directives"],
 	])
 
 	# Exit codes table

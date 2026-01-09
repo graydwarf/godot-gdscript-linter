@@ -19,6 +19,7 @@ const HtmlReportGenerator = preload("res://addons/godot-qube/analyzer/html-repor
 var _target_path: String = "res://"
 var _output_format: String = "console"  # "console", "json", "clickable", "html"
 var _output_file: String = ""  # For HTML output
+var _no_ignore: bool = false  # Bypass all qube:ignore directives
 var _exit_code: int = 0
 
 func _init() -> void:
@@ -55,6 +56,8 @@ func _parse_arguments() -> void:
 				if i + 1 < args.size():
 					_output_file = args[i + 1]
 					i += 1
+			"--no-ignore":
+				_no_ignore = true
 			"--help", "-h":
 				_print_help()
 				quit(0)
@@ -77,6 +80,7 @@ func _print_help() -> void:
 	print("  --clickable       Shorthand for --format clickable (Godot Output panel format)")
 	print("  --html            Shorthand for --format html (generates HTML report)")
 	print("  --output, -o <f>  Output file path (required for --html, default: code_quality_report.html)")
+	print("  --no-ignore       Bypass all qube:ignore directives (show everything)")
 	print("  --help, -h        Show this help message")
 	print("")
 	print("Exit codes:")
@@ -87,6 +91,8 @@ func _print_help() -> void:
 
 func _run_analysis() -> void:
 	var config = AnalysisConfigClass.get_default()
+	if _no_ignore:
+		config.respect_ignore_directives = false
 	var analyzer = CodeAnalyzerClass.new(config)
 
 	var result = analyzer.analyze_directory(_target_path)

@@ -1,3 +1,4 @@
+# qube:ignore-file:file-length=414
 # Godot Qube - Ignore directive handler
 # https://poplava.itch.io
 class_name QubeIgnoreHandler

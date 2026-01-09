@@ -39,6 +39,7 @@ extends Resource
 # Scanning options
 @export var respect_gdignore: bool = true  # Skip directories containing .gdignore files
 @export var scan_addons: bool = false  # Include addons/ folder in scans (disabled by default)
+@export var respect_ignore_directives: bool = true  # Process qube:ignore comments (false = show all issues)
 
 # Complexity thresholds
 @export var cyclomatic_warning: int = 10

@@ -76,13 +76,20 @@ func _create_pinned_issue_callback(file_path: String) -> Callable:
 func _add_issue_from_checker(file_path: String, line_num: int, severity: String, check_id: String, message: String) -> void:
 	var sev = _severity_from_string(severity)
 	var issue = IssueClass.create(file_path, line_num, sev, check_id, message)
-	if _ignore_handler.should_ignore(line_num, check_id):
+	if config.respect_ignore_directives and _ignore_handler.should_ignore(line_num, check_id):
 		result.add_ignored_issue(issue)
 		return
 	result.add_issue(issue)
 
 
 func _add_pinned_issue_from_checker(file_path: String, line_num: int, severity: String, check_id: String, message: String, actual_value: int, limit: int, context: String) -> void:
+	# Bypass ignore handling if disabled
+	if not config.respect_ignore_directives:
+		var sev = _severity_from_string(severity)
+		var issue = IssueClass.create(file_path, line_num, sev, check_id, message)
+		result.add_issue(issue)
+		return
+
 	var pin_result := _ignore_handler.check_with_pin(line_num, check_id, actual_value, limit)
 
 	match pin_result.action:
@@ -123,7 +130,7 @@ func _severity_from_string(severity: String) -> int:
 
 func _add_issue(file_path: String, line_num: int, severity, check_id: String, message: String) -> void:
 	var issue = IssueClass.create(file_path, line_num, severity, check_id, message)
-	if _ignore_handler.should_ignore(line_num, check_id):
+	if config.respect_ignore_directives and _ignore_handler.should_ignore(line_num, check_id):
 		result.add_ignored_issue(issue)
 		return
 	result.add_issue(issue)

@@ -40,6 +40,7 @@ func is_screaming_snake_case(name_to_check: String) -> bool:
 
 
 # Returns array of issue dictionaries: { line: int, severity: String, check_id: String, message: String }
+# qube:ignore long-function - Linear structure with 4 parallel naming checks, refactoring would reduce readability
 func check_line(line: String, line_num: int) -> Array:
 	var issues := []
 	var trimmed := line.strip_edges()

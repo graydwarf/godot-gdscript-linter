@@ -26,6 +26,7 @@ func _init() -> void:
 	_run_analysis()
 	quit(_exit_code)
 
+# qube:ignore-function:long-function - CLI argument parsing with many options
 func _parse_arguments() -> void:
 	var args := OS.get_cmdline_user_args()
 

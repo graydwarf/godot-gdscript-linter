@@ -80,7 +80,7 @@ func _add_command_section(parent: VBoxContainer, controls: Dictionary) -> void:
 	controls.claude_command_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 	var cmd_border_style := StyleBoxFlat.new()
-	cmd_border_style.bg_color = Color(0.15, 0.17, 0.2)
+	cmd_border_style.bg_color = Color(0.09, 0.11, 0.14)  # Input area - darkest
 	cmd_border_style.border_color = Color(0.3, 0.32, 0.35)
 	cmd_border_style.set_border_width_all(1)
 	cmd_border_style.set_corner_radius_all(2)
@@ -141,7 +141,7 @@ func _add_instructions_section(parent: VBoxContainer, controls: Dictionary) -> v
 	controls.claude_instructions_edit.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
 
 	var border_style := StyleBoxFlat.new()
-	border_style.bg_color = Color(0.15, 0.17, 0.2)
+	border_style.bg_color = Color(0.09, 0.11, 0.14)  # Input area - darkest
 	border_style.border_color = Color(0.3, 0.32, 0.35)
 	border_style.set_border_width_all(1)
 	border_style.set_corner_radius_all(2)

@@ -31,7 +31,7 @@ func _init(reset_icon: Texture2D) -> void:
 # Creates the standard card style used by all settings cards
 static func create_card_style() -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.24, 0.267, 0.314, 1.0)  # Match Godot "Other Node" button
+	style.bg_color = Color(0.212, 0.239, 0.290, 1.0)  # #363D4A
 	style.border_color = Color(0.3, 0.35, 0.45, 0.5)
 	style.set_border_width_all(1)
 	style.set_corner_radius_all(6)

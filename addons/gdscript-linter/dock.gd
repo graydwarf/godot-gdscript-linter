@@ -122,26 +122,26 @@ func _validate_required_nodes() -> bool:
 
 func _setup_background() -> void:
 	var bg := ColorRect.new()
-	bg.color = Color(0.176, 0.196, 0.22, 1.0)  # Match Godot scene tree background
+	bg.color = Color(0.145, 0.169, 0.204, 1.0)  # #252B34
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
 	move_child(bg, 0)
 
 
 func _style_toolbar_buttons() -> void:
-	# Create button style matching Godot "Other Node" button
+	# Create button style - #363D4A
 	var btn_style := StyleBoxFlat.new()
-	btn_style.bg_color = Color(0.24, 0.267, 0.314, 1.0)
+	btn_style.bg_color = Color(0.212, 0.239, 0.290, 1.0)  # #363D4A
 	btn_style.set_corner_radius_all(4)
 	btn_style.set_content_margin_all(6)
 
 	var btn_hover := StyleBoxFlat.new()
-	btn_hover.bg_color = Color(0.28, 0.31, 0.36, 1.0)
+	btn_hover.bg_color = Color(0.26, 0.29, 0.34, 1.0)  # Lighter hover
 	btn_hover.set_corner_radius_all(4)
 	btn_hover.set_content_margin_all(6)
 
 	var btn_pressed := StyleBoxFlat.new()
-	btn_pressed.bg_color = Color(0.2, 0.22, 0.26, 1.0)
+	btn_pressed.bg_color = Color(0.17, 0.19, 0.24, 1.0)  # Darker pressed
 	btn_pressed.set_corner_radius_all(4)
 	btn_pressed.set_content_margin_all(6)
 
@@ -383,7 +383,7 @@ func _setup_claude_tooltip() -> void:
 
 	_claude_tooltip = PanelContainer.new()
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.15, 0.15, 0.18, 0.95)
+	style.bg_color = Color(0.11, 0.13, 0.16, 0.95)  # Darker than #252B34
 	style.border_color = Color(0.3, 0.3, 0.35)
 	style.set_border_width_all(1)
 	style.set_corner_radius_all(4)
@@ -417,7 +417,7 @@ func _create_popup_container() -> PanelContainer:
 	popup.top_level = true
 
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.12, 0.14, 0.18, 0.98)
+	style.bg_color = Color(0.11, 0.13, 0.16, 0.98)  # Darker than #252B34
 	style.border_color = Color(0.3, 0.35, 0.45, 0.8)
 	style.set_border_width_all(2)
 	style.set_corner_radius_all(8)
@@ -465,7 +465,7 @@ func _add_popup_context_section(vbox: VBoxContainer) -> void:
 	_claude_customize_context.add_theme_color_override("default_color", Color(0.7, 0.75, 0.8))
 
 	var context_style := StyleBoxFlat.new()
-	context_style.bg_color = Color(0.08, 0.09, 0.11, 1.0)
+	context_style.bg_color = Color(0.09, 0.11, 0.14, 1.0)  # Input area - darkest
 	context_style.set_corner_radius_all(4)
 	context_style.set_content_margin_all(8)
 	_claude_customize_context.add_theme_stylebox_override("normal", context_style)

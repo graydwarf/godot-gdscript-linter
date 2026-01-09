@@ -78,8 +78,8 @@ func _add_ignore_rules_section(parent: VBoxContainer) -> void:
 		"# qube:ignore-next-line\nvar magic = 42")
 
 	_add_thin_separator(parent)
-	_add_ignore_example(parent, "qube:ignore",
-		"var magic = 42  # qube:ignore\nvar x = 100  # qube:ignore:magic-number")
+	_add_ignore_example(parent, "qube:ignore-line",
+		"var magic = 42  # qube:ignore-line\nvar x = 100  # qube:ignore-line:magic-number")
 
 	_add_thin_separator(parent)
 	_add_ignore_example(parent, "Pinned Exceptions (=value)",
@@ -99,7 +99,7 @@ func _add_ignore_table(parent: VBoxContainer) -> void:
 		["qube:ignore-function", "Entire function"],
 		["qube:ignore-block-start/end", "Code block"],
 		["qube:ignore-next-line", "Next line"],
-		["qube:ignore", "Same line"],
+		["qube:ignore-line", "Same line"],
 	]
 
 	for entry in directives:

@@ -11,17 +11,50 @@ signal display_refresh_needed
 const CLAUDE_CODE_DEFAULT_COMMAND := "claude --permission-mode plan"
 const CLAUDE_CODE_DEFAULT_INSTRUCTIONS := "When analyzing issues, recommend the best solution - which may be a qube:ignore directive instead of refactoring. If code is clean and readable but slightly over a limit, suggest adding an ignore comment rather than restructuring working code. Always explain why you're recommending a refactor vs an ignore directive. IMPORTANT: Before adding any ignore directive, read addons/godot-qube/IGNORE_RULES.md for correct syntax and available directive types."
 
-# Settings state
+# Settings state - Display
 var show_total_issues: bool = true
 var show_debt: bool = true
 var show_json_export: bool = false
 var show_html_export: bool = true
 var show_ignored_issues: bool = true
+
+# Settings state - Scanning
 var respect_gdignore: bool = true
 var scan_addons: bool = false
+
+# Settings state - Code Checks (all enabled by default)
+var check_naming_conventions: bool = true
+var check_long_lines: bool = true
+var check_todo_comments: bool = true
+var check_print_statements: bool = true
+var check_magic_numbers: bool = true
+var check_commented_code: bool = true
+var check_missing_types: bool = true
+var check_function_length: bool = true
+var check_parameters: bool = true
+var check_nesting: bool = true
+var check_cyclomatic_complexity: bool = true
+var check_empty_functions: bool = true
+var check_missing_return_type: bool = true
+var check_file_length: bool = true
+var check_god_class: bool = true
+var check_unused_variables: bool = true
+var check_unused_parameters: bool = true
+
+# Settings state - Claude Code
 var claude_code_enabled: bool = false
 var claude_code_command: String = CLAUDE_CODE_DEFAULT_COMMAND
 var claude_custom_instructions: String = ""
+
+# All check control keys for Enable All / Disable All
+var _check_control_keys: Array[String] = [
+	"check_naming_conventions", "check_long_lines", "check_todo_comments",
+	"check_print_statements", "check_magic_numbers", "check_commented_code",
+	"check_missing_types", "check_function_length", "check_parameters",
+	"check_nesting", "check_cyclomatic_complexity", "check_empty_functions",
+	"check_missing_return_type", "check_file_length", "check_god_class",
+	"check_unused_variables", "check_unused_parameters"
+]
 
 # References
 var config: Resource  # QubeConfig
@@ -62,6 +95,9 @@ func load_settings() -> void:
 	config.god_class_functions = _get_setting(editor_settings, "code_quality/limits/god_class_funcs", 20)
 	config.god_class_signals = _get_setting(editor_settings, "code_quality/limits/god_class_signals", 10)
 
+	# Load code checks settings
+	_load_check_settings(editor_settings)
+
 	# Load Claude Code settings
 	claude_code_enabled = _get_setting(editor_settings, "code_quality/claude/enabled", false)
 	claude_code_command = _get_setting(editor_settings, "code_quality/claude/launch_command", CLAUDE_CODE_DEFAULT_COMMAND)
@@ -71,6 +107,38 @@ func load_settings() -> void:
 	_apply_to_ui()
 
 
+# Load all code check settings from EditorSettings and apply to config
+func _load_check_settings(editor_settings: EditorSettings) -> void:
+	# Map of setting key suffix -> (local var name, config property name)
+	var check_mappings := {
+		"naming_conventions": "check_naming_conventions",
+		"long_lines": "check_long_lines",
+		"todo_comments": "check_todo_comments",
+		"print_statements": "check_print_statements",
+		"magic_numbers": "check_magic_numbers",
+		"commented_code": "check_commented_code",
+		"missing_types": "check_missing_types",
+		"function_length": "check_function_length",
+		"parameters": "check_parameters",
+		"nesting": "check_nesting",
+		"cyclomatic_complexity": "check_cyclomatic_complexity",
+		"empty_functions": "check_empty_functions",
+		"missing_return_type": "check_missing_return_type",
+		"file_length": "check_file_length",
+		"god_class": "check_god_class",
+		"unused_variables": "check_unused_variables",
+		"unused_parameters": "check_unused_parameters",
+	}
+
+	for key_suffix: String in check_mappings:
+		var prop_name: String = check_mappings[key_suffix]
+		var setting_key: String = "code_quality/checks/" + key_suffix
+		var value: bool = _get_setting(editor_settings, setting_key, true)
+		set(prop_name, value)
+		if config.get(prop_name) != null:
+			config.set(prop_name, value)
+
+
 # Apply current settings to UI controls
 func _apply_to_ui() -> void:
 	if controls.is_empty():
@@ -78,13 +146,37 @@ func _apply_to_ui() -> void:
 
 	# Boolean controls (CheckBox/CheckButton)
 	var bool_mappings := {
+		# Display options
 		"show_issues_check": func(): return show_total_issues,
 		"show_debt_check": func(): return show_debt,
 		"show_json_export_check": func(): return show_json_export,
 		"show_html_export_check": func(): return show_html_export,
 		"show_ignored_check": func(): return show_ignored_issues,
+		# Scanning options (now in Code Checks card)
 		"respect_gdignore_check": func(): return respect_gdignore,
 		"scan_addons_check": func(): return scan_addons,
+		# Code checks - Naming
+		"check_naming_conventions": func(): return check_naming_conventions,
+		# Code checks - Style
+		"check_long_lines": func(): return check_long_lines,
+		"check_todo_comments": func(): return check_todo_comments,
+		"check_print_statements": func(): return check_print_statements,
+		"check_magic_numbers": func(): return check_magic_numbers,
+		"check_commented_code": func(): return check_commented_code,
+		"check_missing_types": func(): return check_missing_types,
+		# Code checks - Functions
+		"check_function_length": func(): return check_function_length,
+		"check_parameters": func(): return check_parameters,
+		"check_nesting": func(): return check_nesting,
+		"check_cyclomatic_complexity": func(): return check_cyclomatic_complexity,
+		"check_empty_functions": func(): return check_empty_functions,
+		"check_missing_return_type": func(): return check_missing_return_type,
+		# Code checks - Structure
+		"check_file_length": func(): return check_file_length,
+		"check_god_class": func(): return check_god_class,
+		"check_unused_variables": func(): return check_unused_variables,
+		"check_unused_parameters": func(): return check_unused_parameters,
+		# Claude Code
 		"claude_enabled_check": func(): return claude_code_enabled,
 	}
 
@@ -134,10 +226,21 @@ func connect_controls(export_btn: Button, html_export_btn: Button) -> void:
 		controls.show_html_export_check.toggled.connect(func(pressed): _on_show_html_export_toggled(pressed, html_export_btn))
 	if controls.has("show_ignored_check"):
 		controls.show_ignored_check.toggled.connect(_on_show_ignored_toggled)
+
+	# Code checks - Scanning options
 	if controls.has("respect_gdignore_check"):
 		controls.respect_gdignore_check.toggled.connect(_on_respect_gdignore_toggled)
 	if controls.has("scan_addons_check"):
 		controls.scan_addons_check.toggled.connect(_on_scan_addons_toggled)
+
+	# Code checks - Enable All / Disable All buttons
+	if controls.has("enable_all_checks_btn"):
+		controls.enable_all_checks_btn.pressed.connect(_on_enable_all_checks)
+	if controls.has("disable_all_checks_btn"):
+		controls.disable_all_checks_btn.pressed.connect(_on_disable_all_checks)
+
+	# Code checks - Individual toggles
+	_connect_check_signals()
 
 	# Analysis limits (delegated to handler)
 	_limits_handler = QubeSettingsLimitsHandler.new(config, controls, save_setting)
@@ -243,3 +346,63 @@ func _on_claude_instructions_reset_pressed() -> void:
 	if controls.has("claude_instructions_edit"):
 		controls.claude_instructions_edit.text = CLAUDE_CODE_DEFAULT_INSTRUCTIONS
 	save_setting("code_quality/claude/custom_instructions", CLAUDE_CODE_DEFAULT_INSTRUCTIONS)
+
+
+# ========== Code Checks Handlers ==========
+
+# Connect all individual check toggle signals
+func _connect_check_signals() -> void:
+	var check_mappings := {
+		"check_naming_conventions": "naming_conventions",
+		"check_long_lines": "long_lines",
+		"check_todo_comments": "todo_comments",
+		"check_print_statements": "print_statements",
+		"check_magic_numbers": "magic_numbers",
+		"check_commented_code": "commented_code",
+		"check_missing_types": "missing_types",
+		"check_function_length": "function_length",
+		"check_parameters": "parameters",
+		"check_nesting": "nesting",
+		"check_cyclomatic_complexity": "cyclomatic_complexity",
+		"check_empty_functions": "empty_functions",
+		"check_missing_return_type": "missing_return_type",
+		"check_file_length": "file_length",
+		"check_god_class": "god_class",
+		"check_unused_variables": "unused_variables",
+		"check_unused_parameters": "unused_parameters",
+	}
+
+	for control_key in check_mappings:
+		if controls.has(control_key):
+			var setting_suffix: String = check_mappings[control_key]
+			controls[control_key].toggled.connect(
+				func(pressed): _on_check_toggled(control_key, setting_suffix, pressed)
+			)
+
+
+# Generic handler for any code check toggle
+func _on_check_toggled(control_key: String, setting_suffix: String, pressed: bool) -> void:
+	set(control_key, pressed)
+	if config.get(control_key) != null:
+		config.set(control_key, pressed)
+	save_setting("code_quality/checks/" + setting_suffix, pressed)
+	setting_changed.emit("check_" + setting_suffix, pressed)
+
+
+# Enable All checks button handler
+func _on_enable_all_checks() -> void:
+	_set_all_checks(true)
+
+
+# Disable All checks button handler
+func _on_disable_all_checks() -> void:
+	_set_all_checks(false)
+
+
+# Set all code checks to a specific value
+func _set_all_checks(enabled: bool) -> void:
+	for control_key in _check_control_keys:
+		if controls.has(control_key):
+			controls[control_key].button_pressed = enabled
+	# Emit a single refresh signal after bulk change
+	setting_changed.emit("all_checks", enabled)

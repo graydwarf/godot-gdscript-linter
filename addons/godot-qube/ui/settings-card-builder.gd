@@ -64,6 +64,8 @@ func build_settings_panel(settings_panel: PanelContainer, controls: Dictionary) 
 
 	# Collapsible cards (all collapsed by default)
 	cards_vbox.add_child(create_display_options_card(controls))
+	cards_vbox.add_child(create_scan_options_card(controls))
+	cards_vbox.add_child(create_code_checks_card(controls))
 	cards_vbox.add_child(create_limits_card(controls))
 	cards_vbox.add_child(_claude_card_builder.create_card(controls))
 	cards_vbox.add_child(_create_help_card())
@@ -77,7 +79,7 @@ func create_display_options_card(controls: Dictionary) -> QubeCollapsibleCard:
 	var card := QubeCollapsibleCard.new("Display Options", "code_quality/ui/display_options_collapsed")
 	var vbox := card.get_content_container()
 
-	# First row of checkboxes
+	# Row of checkboxes for display toggles
 	var hbox := HBoxContainer.new()
 	hbox.add_theme_constant_override("separation", 15)
 	vbox.add_child(hbox)
@@ -88,17 +90,129 @@ func create_display_options_card(controls: Dictionary) -> QubeCollapsibleCard:
 	controls.show_html_export_check = _create_checkbox("Show HTML Export", hbox)
 	controls.show_ignored_check = _create_checkbox("Show Ignored", hbox, "Show ignored issues in a separate section")
 
-	# Second row for scanning options
-	var hbox2 := HBoxContainer.new()
-	hbox2.add_theme_constant_override("separation", 15)
-	vbox.add_child(hbox2)
+	return card
 
-	controls.respect_gdignore_check = _create_checkbox("Respect .gdignore", hbox2,
-		"Skip directories containing .gdignore files (matches Godot editor behavior)")
-	controls.scan_addons_check = _create_checkbox("Scan addons/", hbox2,
-		"Include addons/ folder in code quality scans (disabled by default)")
+
+# Create Scan Options collapsible card
+func create_scan_options_card(controls: Dictionary) -> QubeCollapsibleCard:
+	var card := QubeCollapsibleCard.new("Scan Options", "code_quality/ui/scan_options_collapsed")
+	var vbox := card.get_content_container()
+
+	var hbox := HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 15)
+	vbox.add_child(hbox)
+
+	controls.respect_gdignore_check = _create_checkbox("Respect .gdignore", hbox,
+		"Skip directories containing .gdignore files")
+	controls.scan_addons_check = _create_checkbox("Scan addons/", hbox,
+		"Include addons/ folder in scans")
 
 	return card
+
+
+# Create Code Checks collapsible card with toggles for all analysis checks
+func create_code_checks_card(controls: Dictionary) -> QubeCollapsibleCard:
+	var card := QubeCollapsibleCard.new("Code Checks", "code_quality/ui/code_checks_collapsed")
+	var vbox := card.get_content_container()
+
+	# Enable All / Disable All buttons row
+	var btn_row := HBoxContainer.new()
+	btn_row.add_theme_constant_override("separation", 8)
+	vbox.add_child(btn_row)
+
+	controls.enable_all_checks_btn = Button.new()
+	controls.enable_all_checks_btn.text = "Enable All"
+	controls.enable_all_checks_btn.flat = true
+	controls.enable_all_checks_btn.tooltip_text = "Enable all code checks"
+	btn_row.add_child(controls.enable_all_checks_btn)
+
+	controls.disable_all_checks_btn = Button.new()
+	controls.disable_all_checks_btn.text = "Disable All"
+	controls.disable_all_checks_btn.flat = true
+	controls.disable_all_checks_btn.tooltip_text = "Disable all code checks"
+	btn_row.add_child(controls.disable_all_checks_btn)
+
+	# Naming section
+	_add_section_header(vbox, "Naming")
+	var naming_grid := _create_check_grid(vbox)
+	controls.check_naming_conventions = _add_check_to_grid(naming_grid, "Naming Conventions",
+		"Check class, function, signal, const, and enum naming")
+
+	# Style section
+	_add_section_header(vbox, "Style")
+	var style_grid := _create_check_grid(vbox)
+	controls.check_long_lines = _add_check_to_grid(style_grid, "Long Lines",
+		"Lines exceeding max length")
+	controls.check_todo_comments = _add_check_to_grid(style_grid, "TODO Comments",
+		"TODO, FIXME, HACK, etc.")
+	controls.check_print_statements = _add_check_to_grid(style_grid, "Print Statements",
+		"Debug print statements")
+	controls.check_magic_numbers = _add_check_to_grid(style_grid, "Magic Numbers",
+		"Hardcoded numbers")
+	controls.check_commented_code = _add_check_to_grid(style_grid, "Commented Code",
+		"Commented-out code blocks")
+	controls.check_missing_types = _add_check_to_grid(style_grid, "Missing Types",
+		"Variables without type hints")
+
+	# Functions section
+	_add_section_header(vbox, "Functions")
+	var funcs_grid := _create_check_grid(vbox)
+	controls.check_function_length = _add_check_to_grid(funcs_grid, "Long Functions",
+		"Functions exceeding line limits")
+	controls.check_parameters = _add_check_to_grid(funcs_grid, "Too Many Params",
+		"Functions with too many parameters")
+	controls.check_nesting = _add_check_to_grid(funcs_grid, "Deep Nesting",
+		"Excessive nesting depth")
+	controls.check_cyclomatic_complexity = _add_check_to_grid(funcs_grid, "High Complexity",
+		"High cyclomatic complexity")
+	controls.check_empty_functions = _add_check_to_grid(funcs_grid, "Empty Functions",
+		"Functions with no implementation")
+	controls.check_missing_return_type = _add_check_to_grid(funcs_grid, "Missing Return Type",
+		"Public functions without return type")
+
+	# Structure section
+	_add_section_header(vbox, "Structure")
+	var struct_grid := _create_check_grid(vbox)
+	controls.check_file_length = _add_check_to_grid(struct_grid, "Long Files",
+		"Files exceeding line limits")
+	controls.check_god_class = _add_check_to_grid(struct_grid, "God Class",
+		"Classes with too many members")
+	controls.check_unused_variables = _add_check_to_grid(struct_grid, "Unused Variables",
+		"Local variables never used")
+	controls.check_unused_parameters = _add_check_to_grid(struct_grid, "Unused Parameters",
+		"Function parameters never used")
+
+	return card
+
+
+# Helper to add a section header label
+func _add_section_header(container: VBoxContainer, text: String) -> void:
+	var label := Label.new()
+	label.text = text
+	label.add_theme_font_size_override("font_size", 13)
+	label.add_theme_color_override("font_color", Color(0.5, 0.7, 0.9))
+	container.add_child(label)
+
+
+# Helper to create a 2-column grid for checkboxes
+func _create_check_grid(container: VBoxContainer) -> GridContainer:
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 20)
+	grid.add_theme_constant_override("v_separation", 4)
+	container.add_child(grid)
+	return grid
+
+
+# Helper to add a checkbox to a grid
+func _add_check_to_grid(grid: GridContainer, label_text: String, tooltip: String) -> CheckBox:
+	var check := CheckBox.new()
+	check.text = label_text
+	check.tooltip_text = tooltip
+	check.button_pressed = true  # Default to enabled
+	check.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid.add_child(check)
+	return check
 
 
 # Create Analysis Limits collapsible card with spinboxes

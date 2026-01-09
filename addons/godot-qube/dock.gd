@@ -1,4 +1,5 @@
-# Godot Qube - Code quality analyzer for GDScript  # qube:ignore:file-length
+# qube:ignore-file:file-length
+# Godot Qube - Code quality analyzer for GDScript
 # https://poplava.itch.io
 @tool
 extends Control
@@ -135,6 +136,7 @@ func _init_settings_manager() -> void:
 	settings_manager = SettingsManagerScript.new(current_config)
 	settings_manager.controls = settings_controls
 	settings_manager.display_refresh_needed.connect(_on_display_refresh_needed)
+	settings_manager.setting_changed.connect(_on_setting_changed)
 	settings_manager.load_settings()
 	settings_manager.connect_controls(export_button, html_export_button)
 
@@ -176,6 +178,15 @@ func _apply_initial_visibility() -> void:
 func _on_display_refresh_needed() -> void:
 	if current_result:
 		_display_results()
+
+
+# Track if checks changed while settings panel was open
+var _checks_changed_while_settings_open: bool = false
+
+# Called when any setting changes - just track that checks changed, don't re-scan
+func _on_setting_changed(key: String, _value: Variant) -> void:
+	if key.begins_with("check_") or key == "all_checks":
+		_checks_changed_while_settings_open = true
 
 
 func _populate_type_filter(sev_filter: String = "all") -> void:
@@ -317,8 +328,14 @@ func _on_file_filter_changed(new_text: String) -> void:
 
 
 func _on_settings_pressed() -> void:
+	var was_visible := settings_panel.visible
 	settings_panel.visible = not settings_panel.visible
 	$VBox/ScrollContainer.visible = not settings_panel.visible
+
+	# If closing settings and checks changed, re-run analysis
+	if was_visible and _checks_changed_while_settings_open:
+		_checks_changed_while_settings_open = false
+		call_deferred("_run_analysis")
 
 
 func _setup_claude_context_menu() -> void:

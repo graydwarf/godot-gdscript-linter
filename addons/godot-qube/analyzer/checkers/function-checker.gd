@@ -145,7 +145,7 @@ func _check_complexity(func_data: Dictionary, complexity: int, add_pinned_callba
 
 
 func _check_return_type(func_data: Dictionary, add_issue_callback: Callable) -> void:
-	if not config.check_missing_types or func_data.has_return_type:
+	if not config.check_missing_return_type or func_data.has_return_type:
 		return
 	# Skip _init, _ready, _process, etc. (built-in overrides)
 	if not func_data.name.begins_with("_"):

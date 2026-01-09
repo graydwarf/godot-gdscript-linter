@@ -41,11 +41,11 @@ func _legacy_code(): pass            # No long-function warnings
 var magic = 42
 
 # Ignore all checks on same line
-var another_magic = 100  # qube:ignore
+var another_magic = 100  # qube:ignore-line
 
 # Ignore specific check (or comma-separated list)
-var debug_print = true  # qube:ignore:magic-number
-var config = 255  # qube:ignore:magic-number,missing-type
+var debug_print = true  # qube:ignore-line:magic-number
+var config = 255  # qube:ignore-line:magic-number,missing-type
 ```
 
 ## Function Ignores

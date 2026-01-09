@@ -95,6 +95,7 @@ func check_line(line: String, line_num: int) -> Array:
 
 
 # Returns issue dictionary or null
+# qube:ignore-function:long-function - Linear validation flow, minimal overage (32 lines)
 func check_function_naming(func_name: String, line_num: int) -> Variant:
 	if not config.check_naming_conventions:
 		return null

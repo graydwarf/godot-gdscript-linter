@@ -6,7 +6,7 @@ class_name QubeIgnoreHandler
 extends RefCounted
 ## Handles parsing and checking of qube:ignore directives
 
-const IGNORE_PATTERN := "qube:ignore"
+const IGNORE_LINE_PATTERN := "qube:ignore-line"
 const IGNORE_NEXT_LINE_PATTERN := "qube:ignore-next-line"
 const IGNORE_FUNCTION_PATTERN := "qube:ignore-function"
 const IGNORE_BLOCK_START_PATTERN := "qube:ignore-block-start"
@@ -61,7 +61,7 @@ func should_ignore(line_num: int, check_id: String) -> bool:
 
 	var current_line: String = _lines[line_idx]
 
-	# Check current line for # qube:ignore or # qube:ignore:check-id
+	# Check current line for # qube:ignore-line or # qube:ignore-line:check-id
 	if _matches_inline_ignore(current_line, check_id):
 		return true
 
@@ -159,11 +159,11 @@ func _get_range_pinned_value(line_num: int, check_id: String):
 
 # Get pinned value from inline ignore directive
 func _get_inline_pinned_value(line: String, check_id: String):
-	if IGNORE_PATTERN not in line or IGNORE_NEXT_LINE_PATTERN in line:
+	if IGNORE_LINE_PATTERN not in line or IGNORE_NEXT_LINE_PATTERN in line:
 		return null
-	if not _check_directive_match(line, IGNORE_PATTERN, check_id):
+	if not _check_directive_match(line, IGNORE_LINE_PATTERN, check_id):
 		return null
-	var extracted := _extract_check_id_with_pin(line, IGNORE_PATTERN)
+	var extracted := _extract_check_id_with_pin(line, IGNORE_LINE_PATTERN)
 	if extracted.check_id == check_id or extracted.check_id == "":
 		return extracted.pinned_value if extracted.pinned_value > 0 else -1
 	return null
@@ -268,11 +268,11 @@ func _is_in_ignored_range(line_num: int, check_id: String) -> bool:
 	return false
 
 
-# Check if line has inline qube:ignore directive matching check_id
+# Check if line has inline qube:ignore-line directive matching check_id
 func _matches_inline_ignore(line: String, check_id: String) -> bool:
-	if IGNORE_PATTERN not in line or IGNORE_NEXT_LINE_PATTERN in line:
+	if IGNORE_LINE_PATTERN not in line or IGNORE_NEXT_LINE_PATTERN in line:
 		return false
-	return _check_directive_match(line, IGNORE_PATTERN, check_id)
+	return _check_directive_match(line, IGNORE_LINE_PATTERN, check_id)
 
 
 # Check if line has qube:ignore-next-line directive matching check_id
@@ -283,8 +283,8 @@ func _matches_ignore_next_line(line: String, check_id: String) -> bool:
 
 
 # Check if a directive in line matches the check_id (or ignores all if no specific id)
-# Supports comma-separated check IDs: qube:ignore:check1,check2,check3
-# Supports pinned value syntax: qube:ignore:check-id=value
+# Supports comma-separated check IDs: qube:ignore-line:check1,check2,check3
+# Supports pinned value syntax: qube:ignore-line:check-id=value
 func _check_directive_match(line: String, pattern: String, check_id: String) -> bool:
 	var ignore_pos := line.find(pattern)
 	if ignore_pos < 0:

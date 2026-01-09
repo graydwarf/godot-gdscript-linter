@@ -137,9 +137,9 @@ Suppress warnings for intentional code patterns using inline comments:
 | `qube:ignore-function`         | Entire function |
 | `qube:ignore-block-start/end`  | Code block      |
 | `qube:ignore-next-line`        | Next line       |
-| `qube:ignore`                  | Same line       |
+| `qube:ignore-line`             | Same line       |
 
-All directives support optional check IDs: `# qube:ignore:magic-number,print-statement`
+All directives support optional check IDs: `# qube:ignore-line:magic-number,print-statement`
 
 #### Pinned Exceptions
 

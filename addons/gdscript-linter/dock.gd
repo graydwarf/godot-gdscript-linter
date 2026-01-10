@@ -79,6 +79,13 @@ var current_config: Resource
 var settings_manager: RefCounted
 var settings_controls: Dictionary = {}
 
+# Busy overlay
+var _busy_overlay: Control
+var _busy_spinner: Label
+var _busy_animation_timer: Timer
+var _spinner_frames := ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+var _spinner_frame_index: int = 0
+
 
 func _ready() -> void:
 	_init_node_references()
@@ -90,6 +97,7 @@ func _ready() -> void:
 	_connect_signals()
 	_setup_filters()
 	_apply_initial_visibility()
+	_setup_busy_overlay()
 
 
 func _init_node_references() -> void:
@@ -202,6 +210,81 @@ func _apply_initial_visibility() -> void:
 	settings_panel.visible = false
 
 
+func _setup_busy_overlay() -> void:
+	# Create overlay container that covers the entire plugin
+	_busy_overlay = Control.new()
+	_busy_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_busy_overlay.mouse_filter = Control.MOUSE_FILTER_STOP  # Block all mouse input
+	_busy_overlay.visible = false
+	_busy_overlay.z_index = 50
+	add_child(_busy_overlay)
+
+	# Semi-transparent dark background
+	var bg := ColorRect.new()
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.color = Color(0.1, 0.12, 0.15, 0.85)
+	_busy_overlay.add_child(bg)
+
+	# Center container for spinner and text
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_busy_overlay.add_child(center)
+
+	# Panel for the loading indicator
+	var panel := PanelContainer.new()
+	var panel_style := StyleBoxFlat.new()
+	panel_style.bg_color = Color(0.15, 0.17, 0.21, 0.95)
+	panel_style.set_corner_radius_all(8)
+	panel_style.set_content_margin_all(24)
+	panel.add_theme_stylebox_override("panel", panel_style)
+	center.add_child(panel)
+
+	# VBox for spinner and label
+	var vbox := VBoxContainer.new()
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_theme_constant_override("separation", 12)
+	panel.add_child(vbox)
+
+	# Spinner label (animated braille dots)
+	_busy_spinner = Label.new()
+	_busy_spinner.text = _spinner_frames[0]
+	_busy_spinner.add_theme_font_size_override("font_size", 48)
+	_busy_spinner.add_theme_color_override("font_color", Color(0.4, 0.6, 0.9))
+	_busy_spinner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(_busy_spinner)
+
+	# "Scanning..." label
+	var label := Label.new()
+	label.text = "Scanning codebase..."
+	label.add_theme_font_size_override("font_size", 14)
+	label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.75))
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(label)
+
+	# Animation timer
+	_busy_animation_timer = Timer.new()
+	_busy_animation_timer.wait_time = 0.08
+	_busy_animation_timer.timeout.connect(_on_busy_animation_tick)
+	add_child(_busy_animation_timer)
+
+
+func _on_busy_animation_tick() -> void:
+	_spinner_frame_index = (_spinner_frame_index + 1) % _spinner_frames.size()
+	_busy_spinner.text = _spinner_frames[_spinner_frame_index]
+
+
+func _show_busy_overlay() -> void:
+	_spinner_frame_index = 0
+	_busy_spinner.text = _spinner_frames[0]
+	_busy_overlay.visible = true
+	_busy_animation_timer.start()
+
+
+func _hide_busy_overlay() -> void:
+	_busy_overlay.visible = false
+	_busy_animation_timer.stop()
+
+
 func _on_display_refresh_needed() -> void:
 	if current_result:
 		_display_results()
@@ -262,7 +345,9 @@ func _on_scan_pressed() -> void:
 	scan_button.disabled = true
 	export_button.disabled = true
 	html_export_button.disabled = true
-	results_label.text = "[color=#888888]Analyzing codebase...[/color]"
+
+	# Show busy overlay before starting analysis
+	_show_busy_overlay()
 
 	call_deferred("_run_analysis")
 
@@ -276,6 +361,9 @@ func _run_analysis() -> void:
 	scan_button.disabled = false
 	export_button.disabled = false
 	html_export_button.disabled = false
+
+	# Hide busy overlay when done
+	_hide_busy_overlay()
 
 
 func _on_export_pressed() -> void:
@@ -362,6 +450,7 @@ func _on_settings_pressed() -> void:
 	# If closing settings and checks changed, re-run analysis
 	if was_visible and _checks_changed_while_settings_open:
 		_checks_changed_while_settings_open = false
+		_show_busy_overlay()
 		call_deferred("_run_analysis")
 
 

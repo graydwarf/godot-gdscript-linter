@@ -89,6 +89,7 @@ func create_display_options_card(controls: Dictionary) -> GDLintCollapsibleCard:
 	controls.show_json_export_check = _create_checkbox("Show JSON Export", hbox)
 	controls.show_html_export_check = _create_checkbox("Show HTML Export", hbox)
 	controls.show_ignored_check = _create_checkbox("Show Ignored", hbox, "Show ignored issues in a separate section")
+	controls.show_full_path_check = _create_checkbox("Show Full Path", hbox, "Show full res:// path instead of just filename")
 
 	return card
 

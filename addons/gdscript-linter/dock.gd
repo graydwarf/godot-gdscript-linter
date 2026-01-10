@@ -346,10 +346,16 @@ func _on_scan_pressed() -> void:
 	export_button.disabled = true
 	html_export_button.disabled = true
 
-	# Show busy overlay before starting analysis
+	# Show busy overlay and wait for it to render before blocking
 	_show_busy_overlay()
+	_start_analysis_after_render()
 
-	call_deferred("_run_analysis")
+
+func _start_analysis_after_render() -> void:
+	# Wait for 2 frames to ensure overlay is fully rendered and animating
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_run_analysis()
 
 
 func _run_analysis() -> void:
@@ -451,7 +457,7 @@ func _on_settings_pressed() -> void:
 	if was_visible and _checks_changed_while_settings_open:
 		_checks_changed_while_settings_open = false
 		_show_busy_overlay()
-		call_deferred("_run_analysis")
+		_start_analysis_after_render()
 
 
 func _setup_claude_context_menu() -> void:
@@ -950,11 +956,11 @@ func _format_issues_by_type(issues: Array, color: String, severity_key: String) 
 
 
 func _format_issue(issue, color: String) -> String:
-	var short_path: String = issue.file_path.get_file()
+	var display_path: String = issue.file_path if settings_manager.show_full_path else issue.file_path.get_file()
 	var link := "%s:%d" % [issue.file_path, issue.line]
 
 	var line := "    [url=%s][color=%s]%s:%d[/color][/url] %s" % [
-		link, color, short_path, issue.line, issue.message
+		link, color, display_path, issue.line, issue.message
 	]
 
 	# Add Claude Code button if enabled
@@ -1010,9 +1016,9 @@ func _format_ignored_section() -> String:
 		if type_issues.size() <= 3:
 			var refs: Array[String] = []
 			for issue in type_issues:
-				var short_path: String = issue.file_path.get_file()
+				var display_path: String = issue.file_path if settings_manager.show_full_path else issue.file_path.get_file()
 				var link := "%s:%d" % [issue.file_path, issue.line]
-				refs.append("[url=%s]%s:%d[/url]" % [link, short_path, issue.line])
+				refs.append("[url=%s]%s:%d[/url]" % [link, display_path, issue.line])
 			bbcode += "  [color=#555555]%s: %s[/color]\n" % [type_name.to_lower(), ", ".join(refs)]
 		else:
 			bbcode += "  [color=#555555]%s (%d):[/color]\n" % [type_name.to_lower(), type_issues.size()]
@@ -1021,10 +1027,10 @@ func _format_ignored_section() -> String:
 				if shown >= ISSUES_PER_CATEGORY:
 					bbcode += "    [color=#444444]... and %d more[/color]\n" % (type_issues.size() - shown)
 					break
-				var short_path: String = issue.file_path.get_file()
+				var display_path: String = issue.file_path if settings_manager.show_full_path else issue.file_path.get_file()
 				var link := "%s:%d" % [issue.file_path, issue.line]
 				bbcode += "    [url=%s][color=#555555]%s:%d[/color][/url] %s\n" % [
-					link, short_path, issue.line, issue.message
+					link, display_path, issue.line, issue.message
 				]
 				shown += 1
 

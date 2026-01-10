@@ -17,6 +17,7 @@ var show_debt: bool = true
 var show_json_export: bool = false
 var show_html_export: bool = true
 var show_ignored_issues: bool = true
+var show_full_path: bool = false
 
 # Settings state - Scanning
 var respect_gdignore: bool = true
@@ -76,6 +77,7 @@ func load_settings() -> void:
 	show_json_export = _get_setting(editor_settings, "code_quality/display/show_json_export", false)
 	show_html_export = _get_setting(editor_settings, "code_quality/display/show_html_export", true)
 	show_ignored_issues = _get_setting(editor_settings, "code_quality/display/show_ignored", true)
+	show_full_path = _get_setting(editor_settings, "code_quality/display/show_full_path", false)
 
 	# Load scanning settings
 	respect_gdignore = _get_setting(editor_settings, "code_quality/scanning/respect_gdignore", true)
@@ -152,6 +154,7 @@ func _apply_to_ui() -> void:
 		"show_json_export_check": func(): return show_json_export,
 		"show_html_export_check": func(): return show_html_export,
 		"show_ignored_check": func(): return show_ignored_issues,
+		"show_full_path_check": func(): return show_full_path,
 		# Scanning options (now in Code Checks card)
 		"respect_gdignore_check": func(): return respect_gdignore,
 		"scan_addons_check": func(): return scan_addons,
@@ -226,6 +229,8 @@ func connect_controls(export_btn: Button, html_export_btn: Button) -> void:
 		controls.show_html_export_check.toggled.connect(func(pressed): _on_show_html_export_toggled(pressed, html_export_btn))
 	if controls.has("show_ignored_check"):
 		controls.show_ignored_check.toggled.connect(_on_show_ignored_toggled)
+	if controls.has("show_full_path_check"):
+		controls.show_full_path_check.toggled.connect(_on_show_full_path_toggled)
 
 	# Code checks - Scanning options
 	if controls.has("respect_gdignore_check"):
@@ -300,6 +305,12 @@ func _on_show_html_export_toggled(pressed: bool, html_export_btn: Button) -> voi
 func _on_show_ignored_toggled(pressed: bool) -> void:
 	show_ignored_issues = pressed
 	save_setting("code_quality/display/show_ignored", pressed)
+	display_refresh_needed.emit()
+
+
+func _on_show_full_path_toggled(pressed: bool) -> void:
+	show_full_path = pressed
+	save_setting("code_quality/display/show_full_path", pressed)
 	display_refresh_needed.emit()
 
 

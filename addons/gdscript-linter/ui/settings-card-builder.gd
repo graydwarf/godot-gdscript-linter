@@ -68,6 +68,7 @@ func build_settings_panel(settings_panel: PanelContainer, controls: Dictionary) 
 	cards_vbox.add_child(create_code_checks_card(controls))
 	cards_vbox.add_child(create_limits_card(controls))
 	cards_vbox.add_child(_claude_card_builder.create_card(controls))
+	cards_vbox.add_child(create_cli_options_card(controls))
 	cards_vbox.add_child(_create_help_card())
 
 	settings_panel.add_child(scroll)
@@ -109,23 +110,6 @@ func create_scan_options_card(controls: Dictionary) -> GDLintCollapsibleCard:
 		"Include addons/ folder in scans")
 	controls.remember_filters_check = _create_checkbox("Remember Filters", hbox,
 		"Persist Severity, Type, and Filter selections across restarts")
-
-	# Config export section
-	var export_row := HBoxContainer.new()
-	export_row.add_theme_constant_override("separation", 8)
-	vbox.add_child(export_row)
-
-	controls.export_config_btn = Button.new()
-	controls.export_config_btn.text = "Export Config..."
-	controls.export_config_btn.flat = true
-	controls.export_config_btn.tooltip_text = "Export settings to a custom JSON file (for CI/CD or alternate configs)"
-	export_row.add_child(controls.export_config_btn)
-
-	var info_label := Label.new()
-	info_label.text = "(Settings auto-sync to gdlint.json)"
-	info_label.add_theme_color_override("font_color", Color(0.5, 0.55, 0.6))
-	info_label.add_theme_font_size_override("font_size", 12)
-	export_row.add_child(info_label)
 
 	return card
 
@@ -279,6 +263,31 @@ func create_limits_card(controls: Dictionary) -> GDLintCollapsibleCard:
 	# Row 5: God class thresholds
 	controls.god_class_funcs_spin = _add_spin_row(grid, "God Class Funcs:", 5, 50, DEFAULT_GOD_CLASS_FUNCS, DEFAULT_GOD_CLASS_FUNCS)
 	controls.god_class_signals_spin = _add_spin_row(grid, "God Class Signals:", 3, 30, DEFAULT_GOD_CLASS_SIGNALS, DEFAULT_GOD_CLASS_SIGNALS)
+
+	return card
+
+
+# Create CLI Options collapsible card
+func create_cli_options_card(controls: Dictionary) -> GDLintCollapsibleCard:
+	var card := GDLintCollapsibleCard.new("CLI Options", "code_quality/ui/cli_options_collapsed")
+	var vbox := card.get_content_container()
+
+	# Export config row
+	var export_row := HBoxContainer.new()
+	export_row.add_theme_constant_override("separation", 8)
+	vbox.add_child(export_row)
+
+	controls.export_config_btn = Button.new()
+	controls.export_config_btn.text = "Export Config..."
+	controls.export_config_btn.flat = true
+	controls.export_config_btn.tooltip_text = "Export settings to a custom JSON file (for CI/CD or alternate configs)"
+	export_row.add_child(controls.export_config_btn)
+
+	var info_label := Label.new()
+	info_label.text = "(Settings auto-sync to gdlint.json)"
+	info_label.add_theme_color_override("font_color", Color(0.5, 0.55, 0.6))
+	info_label.add_theme_font_size_override("font_size", 12)
+	export_row.add_child(info_label)
 
 	return card
 

@@ -1,18 +1,7 @@
-# Exclude from zip/tarball downloads (Asset Library)
-# Users only need the addons/ folder (which contains LICENSE and README)
-.gitattributes export-ignore
-.gitignore export-ignore
-.godot/ export-ignore
-icon.png export-ignore
-icon.png.import export-ignore
-icon.svg export-ignore
-icon.svg.import export-ignore
-project.godot export-ignore
-screenshots/ export-ignore
-LICENSE export-ignore
-README.md export-ignore
+# Normalize line endings for all files that Git considers text files.
+* text=auto eol=lf
 
-# Development/IDE files
-.claude/ export-ignore
-CLAUDE.md export-ignore
-code_quality_report.html export-ignore
+# Only include the addons folder when downloading from the Asset Library.
+/**        export-ignore
+/addons    !export-ignore
+/addons/** !export-ignore

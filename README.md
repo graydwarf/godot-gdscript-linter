@@ -44,13 +44,14 @@ Runs in seconds with no external dependencies. Can help reduce token usage on la
 - Real-time debt score calculation
 - Export to JSON or interactive HTML report
 
-### HTML Reports
+### Reports
 
-- Self-contained dark-themed HTML file
-- Interactive filtering by severity, type, and filename
-- Linked filters: type dropdown updates based on selected severity
-- Summary stats with issue counts and debt score
-- Opens automatically in your default browser
+- Optionally export to .md file (useful for non-claude LLMs and task management systems)
+- Optionally export to .json file
+- Optionally export to self-contained dark-themed HTML file
+  - Interactive filtering by severity, type, and filename
+  - Linked filters: type dropdown updates based on selected severity
+  - Summary stats with issue counts and debt score
 
 <p align="center">
   <img src="screenshots/gdscript-linter-html.png" width="700" alt="GDScript Linter HTML Report">

@@ -78,6 +78,9 @@ var check_file_length: bool = true
 var check_god_class: bool = true
 var check_unused_variables: bool = true
 var check_unused_parameters: bool = true
+var check_ascii_only: bool = true
+var check_strict_limits: bool = true
+var check_sealed: bool = true
 
 # Settings state - Claude Code
 var claude_code_enabled: bool = false
@@ -91,7 +94,8 @@ var _check_control_keys: Array[String] = [
 	"check_missing_types", "check_function_length", "check_parameters",
 	"check_nesting", "check_cyclomatic_complexity", "check_empty_functions",
 	"check_missing_return_type", "check_file_length", "check_god_class",
-	"check_unused_variables", "check_unused_parameters"
+	"check_unused_variables", "check_unused_parameters",
+	"check_ascii_only", "check_strict_limits", "check_sealed"
 ]
 
 # References
@@ -179,6 +183,9 @@ func _load_check_settings(editor_settings: EditorSettings) -> void:
 		"god_class": "check_god_class",
 		"unused_variables": "check_unused_variables",
 		"unused_parameters": "check_unused_parameters",
+		"ascii_only": "check_ascii_only",
+		"strict_limits": "check_strict_limits",
+		"sealed": "check_sealed",
 	}
 
 	for key_suffix: String in check_mappings:
@@ -233,6 +240,10 @@ func _apply_to_ui() -> void:
 		"check_god_class": func(): return check_god_class,
 		"check_unused_variables": func(): return check_unused_variables,
 		"check_unused_parameters": func(): return check_unused_parameters,
+		# Code checks - Defensive
+		"check_ascii_only": func(): return check_ascii_only,
+		"check_strict_limits": func(): return check_strict_limits,
+		"check_sealed": func(): return check_sealed,
 		# Claude Code
 		"claude_enabled_check": func(): return claude_code_enabled,
 	}
@@ -537,6 +548,9 @@ func _connect_check_signals() -> void:
 		"check_god_class": "god_class",
 		"check_unused_variables": "unused_variables",
 		"check_unused_parameters": "unused_parameters",
+		"check_ascii_only": "ascii_only",
+		"check_strict_limits": "strict_limits",
+		"check_sealed": "sealed",
 	}
 
 	for control_key in check_mappings:

@@ -28,7 +28,10 @@ const ISSUE_TYPES := {
 	"naming-const": "Naming: Constant",
 	"naming-enum": "Naming: Enum",
 	"unused-variable": "Unused Variable",
-	"unused-parameter": "Unused Parameter"
+	"unused-parameter": "Unused Parameter",
+	"ascii-violation": "ASCII Violation",
+	"strict-limit": "Strict Limit",
+	"sealed-violation": "Sealed Violation"
 }
 
 # Preload scripts

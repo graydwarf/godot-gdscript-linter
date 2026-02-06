@@ -10,6 +10,8 @@ class_name GDLintHelpCardBuilder
 func create_card_content(container: VBoxContainer) -> void:
 	_add_ignore_rules_section(container)
 	_add_separator(container)
+	_add_defensive_attributes_section(container)
+	_add_separator(container)
 	_add_cli_section(container)
 	_add_separator(container)
 	_add_shortcuts_section(container)
@@ -48,6 +50,58 @@ func _add_code_block(parent: VBoxContainer, code: String) -> void:
 	code_label.add_theme_color_override("font_color", Color(0.7, 0.8, 0.6))
 	code_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	parent.add_child(code_label)
+
+
+func _add_defensive_attributes_section(parent: VBoxContainer) -> void:
+	_add_section_header(parent, "Defensive Attributes", "Enforce stricter rules on specific files or functions")
+
+	# Summary table
+	_add_defensive_table(parent)
+
+	# Examples for each directive
+	_add_thin_separator(parent)
+	_add_ignore_example(parent, "#@ascii_only (per-file)",
+		"#@ascii_only\n# Place in first 10 lines. Raises ascii-violation WARNING\n# for any non-ASCII characters in the file.\n# Also available: ascii_only_project_wide in config")
+
+	_add_thin_separator(parent)
+	_add_ignore_example(parent, "gdlint:strict-file:rule=value",
+		"# gdlint:strict-file:long-function=20\n# Place in first 10 lines. Applies stricter limit to all\n# functions in the file. Raises strict-limit CRITICAL.")
+
+	_add_thin_separator(parent)
+	_add_ignore_example(parent, "gdlint:strict-function:rule=value",
+		"# gdlint:strict-function:long-function=15\nfunc tight_func():\n    # Applies stricter limit to this function only.\n    # Raises strict-limit CRITICAL. Suppresses normal check.")
+
+	_add_thin_separator(parent)
+	_add_ignore_example(parent, "#@Sealed (prevent inheritance)",
+		"#@Sealed\nclass_name MyBaseClass\n# Requires class_name on next line. Raises sealed-violation\n# CRITICAL when another file extends a sealed class.")
+
+
+func _add_defensive_table(parent: VBoxContainer) -> void:
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 20)
+	grid.add_theme_constant_override("v_separation", 2)
+	parent.add_child(grid)
+
+	var directives := [
+		["#@ascii_only", "ASCII enforcement (WARNING)"],
+		["gdlint:strict-file:rule=val", "File-level strict limit (CRITICAL)"],
+		["gdlint:strict-function:rule=val", "Function-level strict limit (CRITICAL)"],
+		["#@Sealed", "Prevent inheritance (CRITICAL)"],
+	]
+
+	for entry in directives:
+		var directive_label := Label.new()
+		directive_label.text = entry[0]
+		directive_label.add_theme_font_size_override("font_size", 12)
+		directive_label.add_theme_color_override("font_color", Color(0.7, 0.8, 0.6))
+		grid.add_child(directive_label)
+
+		var scope_label := Label.new()
+		scope_label.text = entry[1]
+		scope_label.add_theme_font_size_override("font_size", 12)
+		scope_label.add_theme_color_override("font_color", Color(0.55, 0.57, 0.6))
+		grid.add_child(scope_label)
 
 
 func _add_ignore_rules_section(parent: VBoxContainer) -> void:

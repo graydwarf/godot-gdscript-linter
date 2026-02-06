@@ -36,6 +36,10 @@ extends Resource
 @export var check_unused_parameters: bool = true
 @export var check_missing_return_type: bool = true  # Public functions without return type annotation
 @export var ignore_underscore_prefix: bool = true  # Skip _var names as intentionally unused
+@export var check_ascii_only: bool = true          # Enable #@ascii_only per-file attribute
+@export var ascii_only_project_wide: bool = false   # When true, all files checked for ASCII
+@export var check_strict_limits: bool = true        # Enable gdlint:strict directives
+@export var check_sealed: bool = true               # Enable #@Sealed class protection
 
 # Scanning options
 @export var respect_gdignore: bool = true  # Skip directories containing .gdignore files
@@ -158,6 +162,10 @@ func _apply_checks_value(key: String, value: String) -> void:
 		"missing_return_type": check_missing_return_type = enabled
 		"ignore_underscore_prefix": ignore_underscore_prefix = enabled
 		"respect_gdignore": respect_gdignore = enabled
+		"ascii_only": check_ascii_only = enabled
+		"ascii_only_project_wide": ascii_only_project_wide = enabled
+		"strict_limits": check_strict_limits = enabled
+		"sealed": check_sealed = enabled
 
 
 func _apply_exclude_value(key: String, value: String) -> void:
@@ -215,6 +223,10 @@ func save_to_json(path: String) -> bool:
 			"unused_parameters": check_unused_parameters,
 			"missing_return_type": check_missing_return_type,
 			"ignore_underscore_prefix": ignore_underscore_prefix,
+			"ascii_only": check_ascii_only,
+			"ascii_only_project_wide": ascii_only_project_wide,
+			"strict_limits": check_strict_limits,
+			"sealed": check_sealed,
 		},
 		"scanning": {
 			"respect_gdignore": respect_gdignore,
@@ -300,6 +312,10 @@ func load_from_json(path: String) -> bool:
 		if checks.has("unused_parameters"): check_unused_parameters = bool(checks.unused_parameters)
 		if checks.has("missing_return_type"): check_missing_return_type = bool(checks.missing_return_type)
 		if checks.has("ignore_underscore_prefix"): ignore_underscore_prefix = bool(checks.ignore_underscore_prefix)
+		if checks.has("ascii_only"): check_ascii_only = bool(checks.ascii_only)
+		if checks.has("ascii_only_project_wide"): ascii_only_project_wide = bool(checks.ascii_only_project_wide)
+		if checks.has("strict_limits"): check_strict_limits = bool(checks.strict_limits)
+		if checks.has("sealed"): check_sealed = bool(checks.sealed)
 
 	# Apply scanning options
 	if data.has("scanning"):

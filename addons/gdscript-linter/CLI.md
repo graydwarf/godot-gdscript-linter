@@ -68,42 +68,42 @@ Example `gdlint.json`:
 
 ```json
 {
-    "limits": {
-        "file_lines_soft": 200,
-        "file_lines_hard": 300,
-        "function_lines": 30,
-        "function_lines_critical": 60,
-        "max_parameters": 4,
-        "max_nesting": 3,
-        "cyclomatic_warning": 10,
-        "cyclomatic_critical": 15
-    },
-    "checks": {
-        "file_length": true,
-        "function_length": true,
-        "parameters": true,
-        "nesting": true,
-        "todo_comments": true,
-        "long_lines": true,
-        "print_statements": true,
-        "empty_functions": true,
-        "magic_numbers": true,
-        "commented_code": true,
-        "missing_types": true,
-        "cyclomatic_complexity": true,
-        "god_class": true,
-        "naming_conventions": true,
-        "unused_variables": true,
-        "unused_parameters": true,
-        "missing_return_type": true
-    },
-    "scanning": {
-        "respect_gdignore": true,
-        "scan_addons": false
-    },
-    "exclude": {
-        "paths": ["addons/", ".godot/", "tests/mocks/"]
-    }
+	"limits": {
+		"file_lines_soft": 200,
+		"file_lines_hard": 300,
+		"function_lines": 30,
+		"function_lines_critical": 60,
+		"max_parameters": 4,
+		"max_nesting": 3,
+		"cyclomatic_warning": 10,
+		"cyclomatic_critical": 15
+	},
+	"checks": {
+		"file_length": true,
+		"function_length": true,
+		"parameters": true,
+		"nesting": true,
+		"todo_comments": true,
+		"long_lines": true,
+		"print_statements": true,
+		"empty_functions": true,
+		"magic_numbers": true,
+		"commented_code": true,
+		"missing_types": true,
+		"cyclomatic_complexity": true,
+		"god_class": true,
+		"naming_conventions": true,
+		"unused_variables": true,
+		"unused_parameters": true,
+		"missing_return_type": true
+	},
+	"scanning": {
+		"respect_gdignore": true,
+		"scan_addons": false
+	},
+	"exclude": {
+		"paths": ["addons/", ".godot/", "tests/mocks/"]
+	}
 }
 ```
 
@@ -171,18 +171,18 @@ on: [push, pull_request]
 
 jobs:
   lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+	runs-on: ubuntu-latest
+	steps:
+	  - uses: actions/checkout@v4
 
-      - name: Setup Godot
-        uses: chickensoft-games/setup-godot@v1
-        with:
-          version: 4.2.1
+	  - name: Setup Godot
+		uses: chickensoft-games/setup-godot@v1
+		with:
+		  version: 4.2.1
 
-      - name: Run GDScript Linter
-        run: |
-          godot --headless --script res://addons/gdscript-linter/analyzer/analyze-cli.gd -- --format github
+	  - name: Run GDScript Linter
+		run: |
+		  godot --headless --script res://addons/gdscript-linter/analyzer/analyze-cli.gd -- --format github
 ```
 
 ### GitLab CI
@@ -191,10 +191,10 @@ jobs:
 lint:
   image: barichello/godot-ci:4.2.1
   script:
-    - godot --headless --script res://addons/gdscript-linter/analyzer/analyze-cli.gd -- --format json > lint-report.json
+	- godot --headless --script res://addons/gdscript-linter/analyzer/analyze-cli.gd -- --format json > lint-report.json
   artifacts:
-    reports:
-      codequality: lint-report.json
+	reports:
+	  codequality: lint-report.json
 ```
 
 ## Examples
@@ -233,11 +233,11 @@ godot --headless --script ... -- --check high-complexity,long-function
 ```bash
 # Strict CI check: critical issues only, specific checks, GitHub annotations
 godot --headless --script ... -- \
-    --config gdlint-ci.json \
-    --severity critical \
-    --check high-complexity,long-function,god-class \
-    --format github \
-    src/
+	--config gdlint-ci.json \
+	--severity critical \
+	--check high-complexity,long-function,god-class \
+	--format github \
+	src/
 ```
 
 ## Available Check IDs

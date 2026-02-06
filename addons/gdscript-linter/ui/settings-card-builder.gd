@@ -247,6 +247,16 @@ func create_code_checks_card(controls: Dictionary) -> GDLintCollapsibleCard:
 	controls.check_unused_parameters = _add_check_to_grid(struct_grid, "Unused Parameters",
 		"Function parameters never used")
 
+	# Defensive section
+	_add_section_header(vbox, "Defensive")
+	var def_grid := _create_check_grid(vbox)
+	controls.check_ascii_only = _add_check_to_grid(def_grid, "ASCII Only",
+		"Enforce ASCII-only in attributed files")
+	controls.check_strict_limits = _add_check_to_grid(def_grid, "Strict Limits",
+		"Enforce stricter thresholds via directives")
+	controls.check_sealed = _add_check_to_grid(def_grid, "Sealed Classes",
+		"Prevent inheritance of sealed classes")
+
 	return card
 
 

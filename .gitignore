@@ -23,3 +23,14 @@ code_quality_report.html
 
 # Claude Code (user-specific)
 .claude/
+tmpclaude-*
+
+# Auto-generated linter config
+gdlint.json
+gdlint-custom.json
+
+# Local documentation/plans
+docs/
+
+# Benchmark test files
+temp/

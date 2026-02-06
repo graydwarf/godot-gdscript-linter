@@ -13,12 +13,17 @@ var config
 var result
 var _start_time: int
 var _ignore_handler: GDLintIgnoreHandler
+var _strict_handler: GDLintStrictHandler
 
 # Checkers
 var _naming_checker: GDLintNamingChecker
 var _function_checker: GDLintFunctionChecker
 var _unused_checker: GDLintUnusedChecker
 var _style_checker: GDLintStyleChecker
+var _attribute_checker: GDLintAttributeChecker
+
+# Sealed class registry (class_name -> file_path)
+var _sealed_classes: Dictionary = {}
 
 
 func _init(p_config = null) -> void:
@@ -28,12 +33,28 @@ func _init(p_config = null) -> void:
 	_unused_checker = GDLintUnusedChecker.new(config)
 	_style_checker = GDLintStyleChecker.new(config)
 	_ignore_handler = GDLintIgnoreHandler.new()
+	_strict_handler = GDLintStrictHandler.new()
+	_attribute_checker = GDLintAttributeChecker.new(config)
 
 
 func analyze_directory(path: String):
 	result = AnalysisResultClass.new()
 	_start_time = Time.get_ticks_msec()
-	_scan_directory(path)
+	_sealed_classes.clear()
+
+	if config.check_sealed:
+		# Two-pass: collect files, scan for sealed, then analyze
+		var gd_files := _collect_gd_files(path)
+		_scan_for_sealed_classes(gd_files)
+
+		for file_path in gd_files:
+			var file_result = analyze_file(file_path)
+			if file_result:
+				result.add_file_result(file_result)
+	else:
+		# No sealed checking — single-pass (original behavior)
+		_scan_directory(path)
+
 	result.analysis_time_ms = Time.get_ticks_msec() - _start_time
 	return result
 
@@ -51,15 +72,28 @@ func analyze_file(file_path: String):
 func analyze_content(content: String, file_path: String):
 	var lines := content.split("\n")
 	_ignore_handler.initialize(lines)
+	if config.check_strict_limits:
+		_strict_handler.initialize(lines)
 	var file_result = FileResultClass.create(file_path, lines.size())
 
 	_analyze_file_level(lines, file_path, file_result)
 	_function_checker.analyze_functions(lines, file_result, _create_add_issue_callback(file_path), _create_pinned_issue_callback(file_path))
 	_check_god_class(file_path, file_result)
 	_unused_checker.check_unused(lines, _create_add_issue_callback(file_path))
+
+	# ASCII-only check
+	if config.check_ascii_only:
+		var check_ascii: bool = config.ascii_only_project_wide or _attribute_checker.has_ascii_only_attribute(lines)
+		if check_ascii:
+			var ascii_issues: Array = _attribute_checker.check_ascii(lines)
+			for issue in ascii_issues:
+				_add_issue(file_path, issue.line, _severity_from_string(issue.severity), issue.check_id, issue.message)
+
 	_calculate_debt_score(file_result)
 
 	_ignore_handler.clear()
+	if config.check_strict_limits:
+		_strict_handler.clear()
 	return file_result
 
 
@@ -83,6 +117,20 @@ func _add_issue_from_checker(file_path: String, line_num: int, severity: String,
 
 
 func _add_pinned_issue_from_checker(file_path: String, line_num: int, severity: String, check_id: String, message: String, actual_value: int, limit: int, context: String) -> void:
+	# Check for strict override FIRST — replaces the normal check entirely
+	if config.check_strict_limits:
+		var strict_limit: int = _strict_handler.get_strict_limit(line_num, check_id)
+		if strict_limit >= 0:
+			if actual_value > strict_limit:
+				var msg := "%s exceeds strict limit (%d/%d)" % [context, actual_value, strict_limit]
+				var issue = IssueClass.create(file_path, line_num, IssueClass.Severity.CRITICAL, "strict-limit", msg)
+				if config.respect_ignore_directives and _ignore_handler.should_ignore(line_num, "strict-limit"):
+					result.add_ignored_issue(issue)
+				else:
+					result.add_issue(issue)
+			# Whether exceeded or not, the normal check is suppressed
+			return
+
 	# Bypass ignore handling if disabled
 	if not config.respect_ignore_directives:
 		var sev = _severity_from_string(severity)
@@ -168,6 +216,60 @@ func _scan_directory(path: String) -> void:
 	dir.list_dir_end()
 
 
+# Recursively collect all .gd file paths (same filtering as _scan_directory)
+func _collect_gd_files(path: String) -> Array[String]:
+	var files: Array[String] = []
+	var normalized_path := path
+	if OS.has_feature("windows") and not path.begins_with("res://") and not path.begins_with("user://"):
+		normalized_path = path.replace("/", "\\")
+	var dir := DirAccess.open(normalized_path)
+	if not dir:
+		return files
+
+	if config.respect_gdignore and dir.file_exists(".gdignore"):
+		return files
+
+	dir.list_dir_begin()
+	var file_name := dir.get_next()
+
+	while file_name != "":
+		var full_path := path.path_join(file_name)
+
+		if dir.current_is_dir():
+			if not file_name.begins_with(".") and not config.is_path_excluded(full_path):
+				files.append_array(_collect_gd_files(full_path))
+		elif file_name.ends_with(".gd"):
+			if not config.is_path_excluded(full_path):
+				files.append(full_path)
+
+		file_name = dir.get_next()
+
+	dir.list_dir_end()
+	return files
+
+
+# Pass 1: Scan files for #@Sealed + class_name declarations (reads only first 10 lines)
+func _scan_for_sealed_classes(file_paths: Array[String]) -> void:
+	for file_path in file_paths:
+		var file := FileAccess.open(file_path, FileAccess.READ)
+		if not file:
+			continue
+		var lines: Array[String] = []
+		for i in range(10):
+			if file.eof_reached():
+				break
+			lines.append(file.get_line())
+		file.close()
+
+		# Look for #@Sealed immediately followed by class_name
+		for i in range(lines.size() - 1):
+			if lines[i].strip_edges() == "#@Sealed":
+				var next_line := lines[i + 1].strip_edges()
+				if next_line.begins_with("class_name "):
+					var class_name_str := next_line.substr(11).split(" ")[0].strip_edges()
+					_sealed_classes[class_name_str] = file_path
+
+
 func _analyze_file_level(lines: Array, file_path: String, file_result) -> void:
 	var line_count := lines.size()
 
@@ -180,6 +282,15 @@ func _analyze_file_level(lines: Array, file_path: String, file_result) -> void:
 		var line: String = lines[i]
 		var trimmed := line.strip_edges()
 		var line_num := i + 1
+
+		# Sealed class violation check
+		if config.check_sealed and not _sealed_classes.is_empty():
+			if trimmed.begins_with("extends "):
+				var extends_target := trimmed.substr(8).split(" ")[0].strip_edges()
+				if _sealed_classes.has(extends_target):
+					var sealed_file: String = _sealed_classes[extends_target]
+					_add_issue(file_path, line_num, IssueClass.Severity.CRITICAL, "sealed-violation",
+						"Cannot extend '%s' - class is marked as #@Sealed (defined in %s)" % [extends_target, sealed_file])
 
 		# Style checks (long lines, TODO, print, magic numbers, etc.)
 		var style_issues := _style_checker.check_line(line, trimmed, line_num, file_result)

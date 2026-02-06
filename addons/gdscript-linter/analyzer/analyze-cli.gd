@@ -229,6 +229,9 @@ func _apply_check_filter_to_config(config: Resource) -> void:
 		"naming-enum": "check_naming_conventions",
 		"unused-variable": "check_unused_variables",
 		"unused-parameter": "check_unused_parameters",
+		"ascii-violation": "check_ascii_only",
+		"strict-limit": "check_strict_limits",
+		"sealed-violation": "check_sealed",
 	}
 
 	# Disable all checks first

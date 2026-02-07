@@ -1,6 +1,6 @@
 # GDScript Linter - Static Code Quality Analyzer
 
-![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)
+![Version](https://img.shields.io/badge/version-3.2.0-blue.svg)
 ![Godot](https://img.shields.io/badge/Godot-4.0%2B-blue.svg)
 
 Static code analyzer for GDScript that identifies code quality issues, technical debt, and best practice violations. Features clickable navigation to issues, configurable thresholds, and CI/CD support via CLI.
@@ -32,6 +32,9 @@ Runs in seconds with no external dependencies. Can help reduce token usage on la
 | **Naming Conventions** | Info/Warning | Non-standard naming (snake_case, PascalCase, etc.) |
 | **Unused Variables** | Warning | Local variables declared but never used |
 | **Unused Parameters** | Info | Function parameters declared but never used |
+| **ASCII Enforcement** | Warning | Non-ASCII characters in `#@ascii_only` files |
+| **Strict Limits** | Critical | Values exceeding `gdlint:strict` overrides |
+| **Sealed Classes** | Critical | Extending a `#@Sealed` class |
 
 ### Editor Integration
 
@@ -161,6 +164,53 @@ func my_complex_function():
 
 See **[IGNORE_RULES.md](addons/gdscript-linter/IGNORE_RULES.md)** for full syntax reference and examples.
 
+### Defensive Attributes
+
+Three attributes for enforcing stricter contracts on critical code.
+
+#### `#@ascii_only` — ASCII Enforcement
+
+Place in the first 10 lines of a file to flag non-ASCII characters (including in strings and comments) as warnings.
+
+```gdscript
+#@ascii_only
+extends Node
+
+var name := "hello"   # OK
+var label := "héllo"  # WARNING: ascii-violation
+```
+
+Enable project-wide with `ascii_only_project_wide = true` in `.gdlint.cfg`. Individual files can opt out with `# gdlint:ignore-file:ascii-violation`.
+
+#### `# gdlint:strict` — Per-Scope Tighter Limits
+
+Override global thresholds with stricter values. Issues fire at CRITICAL severity and suppress the normal threshold check.
+
+```gdscript
+# File-scoped (first 10 lines):
+# gdlint:strict-file:file-length=200
+
+# Function-scoped (above func):
+# gdlint:strict-function:long-function=25
+func critical_function():
+    pass
+```
+
+Supported rules: `long-function`, `file-length`, `high-complexity`, `deep-nesting`, `too-many-params`, `god-class-functions`, `god-class-signals`
+
+#### `#@Sealed` — Prevent Class Inheritance
+
+Mark a class as sealed to prevent other files from extending it. Requires `class_name` on the next line and directory-wide analysis.
+
+```gdscript
+#@Sealed
+class_name CoreAPI
+extends RefCounted
+# Other files extending CoreAPI will get a CRITICAL sealed-violation
+```
+
+See **[IGNORE_RULES.md](addons/gdscript-linter/IGNORE_RULES.md)** for full details on all defensive attributes.
+
 ### Project Configuration
 
 Create a `.gdlint.cfg` file in your project root to customize settings:
@@ -175,6 +225,7 @@ max_parameters = 4
 max_nesting = 3
 cyclomatic_warning = 10
 cyclomatic_critical = 15
+ascii_only_project_wide = false
 
 [checks]
 file_length = true
@@ -193,6 +244,8 @@ naming_conventions = true
 unused_variables = true
 unused_parameters = true
 ignore_underscore_prefix = true
+ascii_only = true
+sealed_classes = true
 
 [exclude]
 paths = addons/, .godot/, tests/mocks/

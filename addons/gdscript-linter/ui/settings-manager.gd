@@ -33,8 +33,8 @@ const CLAUDE_CODE_DEFAULT_INSTRUCTIONS := """When analyzing linter issues, consi
 Always explain your reasoning for recommending a refactor vs an ignore directive.
 
 **Required steps:**
-- Before adding any ignore directive, read `res://addons/gdscript-linter/IGNORE_RULES.md` for correct syntax
-- After completing changes, run the linter via CLI using options in `res://addons/gdscript-linter/CLI.md`"""
+- Before adding any ignore directive, read `res://addons/gdscript-linter/docs/IGNORE_RULES.md` for correct syntax
+- After completing changes, run the linter via CLI using options in `res://addons/gdscript-linter/docs/CLI.md`"""
 
 # Settings state - Display
 var show_total_issues: bool = true

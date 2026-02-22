@@ -162,7 +162,7 @@ func my_complex_function():
 | Actual improved (35 → 32, still > 30) | ℹ️ Info: "consider tightening" |
 | Actual now within limit (35 → 25) | ℹ️ Info: "pinned ignore is now unnecessary" |
 
-See **[IGNORE_RULES.md](addons/gdscript-linter/IGNORE_RULES.md)** for full syntax reference and examples.
+See **[IGNORE_RULES.md](addons/gdscript-linter/docs/IGNORE_RULES.md)** for full syntax reference and examples.
 
 ### Defensive Attributes
 
@@ -209,7 +209,7 @@ extends RefCounted
 # Other files extending CoreAPI will get a CRITICAL sealed-violation
 ```
 
-See **[IGNORE_RULES.md](addons/gdscript-linter/IGNORE_RULES.md)** for full details on all defensive attributes.
+See **[IGNORE_RULES.md](addons/gdscript-linter/docs/IGNORE_RULES.md)** for full details on all defensive attributes.
 
 ### Project Configuration
 

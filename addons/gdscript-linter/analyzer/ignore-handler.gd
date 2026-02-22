@@ -1,6 +1,6 @@
 # gdlint:ignore-file:file-length=414
 # GDScript Linter - Ignore directive handler
-# See IGNORE_RULES.md for directive syntax and usage
+# See docs/IGNORE_RULES.md for directive syntax and usage
 # https://poplava.itch.io
 class_name GDLintIgnoreHandler
 extends RefCounted

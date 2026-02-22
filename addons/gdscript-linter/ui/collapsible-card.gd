@@ -62,7 +62,6 @@ func _setup_card() -> void:
 	var title_label := Label.new()
 	title_label.text = title
 	title_label.add_theme_font_size_override("font_size", 17)
-	title_label.add_theme_color_override("font_color", Color(0.9, 0.92, 0.95))
 	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header_hbox.add_child(title_label)
 
@@ -107,8 +106,8 @@ func _update_styles() -> void:
 
 	# Header style - rounded top corners, bottom border only when expanded
 	var header_style := StyleBoxFlat.new()
-	header_style.bg_color = Color(0.145, 0.169, 0.204, 1.0)  # #252B34
-	header_style.border_color = Color(0.3, 0.35, 0.45, 0.5)
+	header_style.bg_color = GDLintThemeColors.get_color("panel_bg")
+	header_style.border_color = GDLintThemeColors.get_color("border")
 	header_style.set_border_width_all(1)
 	header_style.set_content_margin_all(12)
 
@@ -128,8 +127,8 @@ func _update_styles() -> void:
 	if _body_panel:
 		# Body style - rounded bottom corners, no top corners
 		var body_style := StyleBoxFlat.new()
-		body_style.bg_color = Color(0.145, 0.169, 0.204, 1.0)  # #252B34
-		body_style.border_color = Color(0.3, 0.35, 0.45, 0.5)
+		body_style.bg_color = GDLintThemeColors.get_color("panel_bg")
+		body_style.border_color = GDLintThemeColors.get_color("border")
 		body_style.set_border_width_all(1)
 		body_style.border_width_top = 0  # No top border (header has bottom)
 		body_style.corner_radius_top_left = 0

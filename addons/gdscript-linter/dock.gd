@@ -66,6 +66,13 @@ var _claude_tooltip: PanelContainer
 var _grouped_issues_by_type: Dictionary = {}  # check_id -> Array of issues
 var _grouped_issues_by_severity: Dictionary = {}  # severity -> Array of issues
 
+# Claude tooltip/popup styles (stored for theme updates)
+var _claude_tooltip_style: StyleBoxFlat
+var _claude_tooltip_label: Label
+var _claude_popup_style: StyleBoxFlat
+var _claude_popup_title: Label
+var _claude_popup_context_style: StyleBoxFlat
+
 # Claude customize dialog
 var _claude_customize_popup: PanelContainer
 var _claude_customize_context: RichTextLabel  # Shows issue(s) being sent
@@ -81,9 +88,15 @@ var current_config: Resource
 var settings_manager: RefCounted
 var settings_controls: Dictionary = {}
 
+# Background (stored for theme updates)
+var _bg_rect: ColorRect
+
 # Busy overlay
 var _busy_overlay: Control
+var _busy_overlay_bg: ColorRect
+var _busy_overlay_panel_style: StyleBoxFlat
 var _busy_spinner: Label
+var _busy_label: Label
 var _busy_animation_timer: Timer
 var _spinner_frames := ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
 var _spinner_frame_index: int = 0
@@ -92,17 +105,25 @@ var _spinner_frame_index: int = 0
 var _export_config_dialog: EditorFileDialog
 
 # Export folder dialog
-var _export_folder_dialog: EditorFileDialog
+var _export_folder_dialog: FileDialog
 
 # Export notification panel
 var _export_notification: PanelContainer
+var _export_notification_style: StyleBoxFlat
+var _export_prefix_label: Label
 var _export_path_label: Label
 var _last_export_path: String = ""
 var _last_export_content: String = ""
 var _last_export_type: String = ""  # "json", "html", "md"
 
+# Theme-derived muted color hex for BBCode (replaces hardcoded #888888)
+var _muted_hex: String = "#888888"
+var _ready_complete: bool = false
+
 
 func _ready() -> void:
+	GDLintThemeColors.refresh()
+	_refresh_muted_hex()
 	_init_node_references()
 	if not _validate_required_nodes():
 		return
@@ -113,6 +134,29 @@ func _ready() -> void:
 	_setup_filters()
 	_apply_initial_visibility()
 	_setup_busy_overlay()
+	_set_initial_results_text()
+	_ready_complete = true
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_THEME_CHANGED and _ready_complete:
+		GDLintThemeColors.refresh()
+		_refresh_muted_hex()
+		_apply_theme_to_dynamic_ui()
+		_rebuild_settings_panel()
+		if not current_result:
+			_set_initial_results_text()
+
+
+# Converts the editor disabled_font_color to a hex string for BBCode
+func _refresh_muted_hex() -> void:
+	var c: Color = EditorInterface.get_editor_theme().get_color("disabled_font_color", "Editor")
+	_muted_hex = "#" + c.to_html(false)
+
+
+# Sets the initial placeholder text using theme-derived color
+func _set_initial_results_text() -> void:
+	results_label.text = "[center][color=%s]Click Scan to analyze codebase[/color][/center]" % _muted_hex
 
 
 func _init_node_references() -> void:
@@ -141,8 +185,7 @@ func _init_node_references() -> void:
 	results_style.set_content_margin_all(10)
 	results_label.add_theme_stylebox_override("normal", results_style)
 
-	# Style toolbar buttons to match Godot theme
-	_style_toolbar_buttons()
+	# Toolbar buttons inherit editor theme styling - no overrides needed
 
 
 func _validate_required_nodes() -> bool:
@@ -153,35 +196,12 @@ func _validate_required_nodes() -> bool:
 
 
 func _setup_background() -> void:
-	var bg := ColorRect.new()
-	bg.color = Color(0.212, 0.239, 0.290, 1.0)  # #363D4A
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(bg)
-	move_child(bg, 0)
+	_bg_rect = ColorRect.new()
+	_bg_rect.color = GDLintThemeColors.get_color("main_bg")
+	_bg_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(_bg_rect)
+	move_child(_bg_rect, 0)
 
-
-func _style_toolbar_buttons() -> void:
-	# Create button style - #252B34
-	var btn_style := StyleBoxFlat.new()
-	btn_style.bg_color = Color(0.145, 0.169, 0.204, 1.0)  # #252B34
-	btn_style.set_corner_radius_all(4)
-	btn_style.set_content_margin_all(6)
-
-	var btn_hover := StyleBoxFlat.new()
-	btn_hover.bg_color = Color(0.18, 0.21, 0.25, 1.0)  # Lighter hover
-	btn_hover.set_corner_radius_all(4)
-	btn_hover.set_content_margin_all(6)
-
-	var btn_pressed := StyleBoxFlat.new()
-	btn_pressed.bg_color = Color(0.11, 0.13, 0.16, 1.0)  # Darker pressed
-	btn_pressed.set_corner_radius_all(4)
-	btn_pressed.set_content_margin_all(6)
-
-	for btn in [scan_button, html_export_button, export_button, md_export_button]:
-		if btn:
-			btn.add_theme_stylebox_override("normal", btn_style)
-			btn.add_theme_stylebox_override("hover", btn_hover)
-			btn.add_theme_stylebox_override("pressed", btn_pressed)
 
 
 func _init_config_and_settings_panel() -> void:
@@ -277,10 +297,10 @@ func _setup_busy_overlay() -> void:
 	add_child(_busy_overlay)
 
 	# Semi-transparent dark background
-	var bg := ColorRect.new()
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	bg.color = Color(0.1, 0.12, 0.15, 0.85)
-	_busy_overlay.add_child(bg)
+	_busy_overlay_bg = ColorRect.new()
+	_busy_overlay_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_busy_overlay_bg.color = GDLintThemeColors.get_color("overlay_bg")
+	_busy_overlay.add_child(_busy_overlay_bg)
 
 	# Center container for spinner and text
 	var center := CenterContainer.new()
@@ -289,11 +309,11 @@ func _setup_busy_overlay() -> void:
 
 	# Panel for the loading indicator
 	var panel := PanelContainer.new()
-	var panel_style := StyleBoxFlat.new()
-	panel_style.bg_color = Color(0.15, 0.17, 0.21, 0.95)
-	panel_style.set_corner_radius_all(8)
-	panel_style.set_content_margin_all(24)
-	panel.add_theme_stylebox_override("panel", panel_style)
+	_busy_overlay_panel_style = StyleBoxFlat.new()
+	_busy_overlay_panel_style.bg_color = GDLintThemeColors.get_color("overlay_panel")
+	_busy_overlay_panel_style.set_corner_radius_all(8)
+	_busy_overlay_panel_style.set_content_margin_all(24)
+	panel.add_theme_stylebox_override("panel", _busy_overlay_panel_style)
 	center.add_child(panel)
 
 	# VBox for spinner and label
@@ -306,23 +326,74 @@ func _setup_busy_overlay() -> void:
 	_busy_spinner = Label.new()
 	_busy_spinner.text = _spinner_frames[0]
 	_busy_spinner.add_theme_font_size_override("font_size", 48)
-	_busy_spinner.add_theme_color_override("font_color", Color(0.4, 0.6, 0.9))
+	_busy_spinner.add_theme_color_override("font_color", GDLintThemeColors.get_color("spinner"))
 	_busy_spinner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(_busy_spinner)
 
-	# "Scanning..." label
-	var label := Label.new()
-	label.text = "Scanning codebase..."
-	label.add_theme_font_size_override("font_size", 14)
-	label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.75))
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(label)
+	# "Scanning..." label (inherits font color from editor theme)
+	_busy_label = Label.new()
+	_busy_label.text = "Scanning codebase..."
+	_busy_label.add_theme_font_size_override("font_size", 14)
+	_busy_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(_busy_label)
 
 	# Animation timer
 	_busy_animation_timer = Timer.new()
 	_busy_animation_timer.wait_time = 0.08
 	_busy_animation_timer.timeout.connect(_on_busy_animation_tick)
 	add_child(_busy_animation_timer)
+
+
+
+
+# Updates all dynamically-created UI elements with fresh theme colors
+func _apply_theme_to_dynamic_ui() -> void:
+	# Main background
+	if _bg_rect:
+		_bg_rect.color = GDLintThemeColors.get_color("main_bg")
+
+	# Busy overlay
+	if _busy_overlay_bg:
+		_busy_overlay_bg.color = GDLintThemeColors.get_color("overlay_bg")
+	if _busy_overlay_panel_style:
+		_busy_overlay_panel_style.bg_color = GDLintThemeColors.get_color("overlay_panel")
+	if _busy_spinner:
+		_busy_spinner.add_theme_color_override("font_color", GDLintThemeColors.get_color("spinner"))
+
+	# Export notification
+	if _export_notification_style:
+		_export_notification_style.bg_color = GDLintThemeColors.get_color("panel_bg")
+		_export_notification_style.border_color = GDLintThemeColors.get_color("border")
+	if _export_path_label:
+		_export_path_label.add_theme_color_override("font_color", GDLintThemeColors.get_color("font_muted"))
+
+	# Claude tooltip
+	if _claude_tooltip_style:
+		_claude_tooltip_style.bg_color = GDLintThemeColors.get_color("tooltip_bg")
+		_claude_tooltip_style.border_color = GDLintThemeColors.get_color("tooltip_border")
+
+	# Claude customize popup
+	if _claude_popup_style:
+		_claude_popup_style.bg_color = GDLintThemeColors.get_color("popup_bg")
+		_claude_popup_style.border_color = GDLintThemeColors.get_color("popup_border")
+	# _claude_popup_title inherits font color from editor theme
+	if _claude_popup_context_style:
+		_claude_popup_context_style.bg_color = GDLintThemeColors.get_color("input_bg")
+
+
+# Rebuilds the settings panel UI to pick up new theme colors
+func _rebuild_settings_panel() -> void:
+	# Remove old settings panel children
+	for child in settings_panel.get_children():
+		settings_panel.remove_child(child)
+		child.queue_free()
+
+	# Rebuild
+	settings_controls.clear()
+	_init_config_and_settings_panel()
+	settings_manager.controls = settings_controls
+	settings_manager.load_settings()
+	settings_manager.connect_controls(export_button, html_export_button, md_export_button)
 
 
 func _on_busy_animation_tick() -> void:
@@ -353,9 +424,9 @@ func _on_export_config_file_selected(file_path: String) -> void:
 
 
 func _setup_export_folder_dialog() -> void:
-	_export_folder_dialog = EditorFileDialog.new()
-	_export_folder_dialog.file_mode = EditorFileDialog.FILE_MODE_OPEN_DIR
-	_export_folder_dialog.access = EditorFileDialog.ACCESS_FILESYSTEM
+	_export_folder_dialog = FileDialog.new()
+	_export_folder_dialog.file_mode = FileDialog.FILE_MODE_OPEN_DIR
+	_export_folder_dialog.access = FileDialog.ACCESS_FILESYSTEM
 	_export_folder_dialog.title = "Select Export Folder"
 	_export_folder_dialog.dir_selected.connect(_on_export_folder_selected)
 	add_child(_export_folder_dialog)
@@ -376,13 +447,8 @@ func _setup_export_notification() -> void:
 	_export_notification = PanelContainer.new()
 	_export_notification.visible = false
 
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.12, 0.18, 0.14, 1.0)  # Subtle green tint for success
-	style.border_color = Color(0.3, 0.5, 0.35, 0.8)
-	style.set_border_width_all(1)
-	style.set_corner_radius_all(6)
-	style.set_content_margin_all(10)
-	_export_notification.add_theme_stylebox_override("panel", style)
+	_export_notification_style = GDLintThemeColors.create_card_style()
+	_export_notification.add_theme_stylebox_override("panel", _export_notification_style)
 
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 6)
@@ -393,13 +459,12 @@ func _setup_export_notification() -> void:
 	path_hbox.add_theme_constant_override("separation", 8)
 	vbox.add_child(path_hbox)
 
-	var path_prefix := Label.new()
-	path_prefix.text = "Exported:"
-	path_prefix.add_theme_color_override("font_color", Color(0.6, 0.8, 0.65))
-	path_hbox.add_child(path_prefix)
+	_export_prefix_label = Label.new()
+	_export_prefix_label.text = "Exported:"
+	path_hbox.add_child(_export_prefix_label)
 
 	_export_path_label = Label.new()
-	_export_path_label.add_theme_color_override("font_color", Color(0.85, 0.9, 0.85))
+	_export_path_label.add_theme_color_override("font_color", GDLintThemeColors.get_color("font_muted"))
 	_export_path_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_export_path_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	path_hbox.add_child(_export_path_label)
@@ -515,6 +580,28 @@ func _get_export_path(filename: String) -> String:
 	if settings_manager.export_folder_path.is_empty():
 		return "res://" + filename
 	return settings_manager.export_folder_path.path_join(filename)
+
+
+# Validates the export directory exists and writes content to the export path
+func _write_export_file(export_path: String, content: String, format_label: String) -> bool:
+	var dir_path := export_path.get_base_dir()
+	if not DirAccess.dir_exists_absolute(dir_path):
+		var abs_dir := ProjectSettings.globalize_path(dir_path)
+		push_error("Code Quality: Export directory does not exist: %s" % abs_dir)
+		OS.alert("Export directory does not exist:\n%s\n\nCheck your Export Folder setting or reset it to default." % abs_dir, "Export Error")
+		return false
+
+	var file := FileAccess.open(export_path, FileAccess.WRITE)
+	if file:
+		file.store_string(content)
+		file.close()
+		return true
+
+	var err := FileAccess.get_open_error()
+	var abs_path := ProjectSettings.globalize_path(export_path)
+	push_error("Code Quality: Failed to write %s report to %s (error %d)" % [format_label, abs_path, err])
+	OS.alert("Failed to write %s export file:\n%s\n\nError code: %d\nCheck file permissions and that the directory exists." % [format_label, abs_path, err], "Export Error")
+	return false
 
 
 func _show_busy_overlay() -> void:
@@ -694,14 +781,8 @@ func _on_export_pressed() -> void:
 	var json_str := JSON.stringify(export_dict, "\t")
 	var export_path := _get_export_path("code_quality_report.json")
 
-	var file := FileAccess.open(export_path, FileAccess.WRITE)
-	if file:
-		file.store_string(json_str)
-		file.close()
+	if _write_export_file(export_path, json_str, "JSON"):
 		_show_export_notification(export_path, json_str, "json")
-	else:
-		push_error("Code Quality: Failed to write export file")
-		OS.alert("Failed to write JSON export file:\n%s" % export_path, "Export Error")
 
 
 func _on_html_export_pressed() -> void:
@@ -719,19 +800,14 @@ func _on_html_export_pressed() -> void:
 	var html := HtmlReportGenerator.generate(current_result, issues_to_export, _get_export_context())
 	var export_path := _get_export_path("code_quality_report.html")
 
-	var file := FileAccess.open(export_path, FileAccess.WRITE)
-	if file:
-		file.store_string(html)
-		file.close()
+	if _write_export_file(export_path, html, "HTML"):
 		_show_export_notification(export_path, html, "html")
-	else:
-		push_error("Code Quality: Failed to write HTML report")
-		OS.alert("Failed to write HTML export file:\n%s" % export_path, "Export Error")
 
 
 func _on_md_export_pressed() -> void:
 	if not current_result:
-		return
+		var AnalysisResultScript = preload("res://addons/gdscript-linter/analyzer/analysis-result.gd")
+		current_result = AnalysisResultScript.new()
 
 	var issues_to_export: Array
 	if settings_manager.filter_exports:
@@ -743,14 +819,8 @@ func _on_md_export_pressed() -> void:
 	var md := MdReportGenerator.generate(current_result, issues_to_export, _get_export_context())
 	var export_path := _get_export_path("code_quality_report.md")
 
-	var file := FileAccess.open(export_path, FileAccess.WRITE)
-	if file:
-		file.store_string(md)
-		file.close()
+	if _write_export_file(export_path, md, "Markdown"):
 		_show_export_notification(export_path, md, "md")
-	else:
-		push_error("Code Quality: Failed to write Markdown report")
-		OS.alert("Failed to write Markdown export file:\n%s" % export_path, "Export Error")
 
 
 func _on_severity_filter_changed(index: int) -> void:
@@ -838,20 +908,19 @@ func _setup_claude_context_menu() -> void:
 
 
 func _setup_claude_tooltip() -> void:
-	var label := Label.new()
-	label.text = "Click: Plan mode | Shift+Click: Fix now | Right-click: Options"
-	label.add_theme_font_size_override("font_size", 11)
-	label.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85))
+	_claude_tooltip_label = Label.new()
+	_claude_tooltip_label.text = "Click: Plan mode | Shift+Click: Fix now | Right-click: Options"
+	_claude_tooltip_label.add_theme_font_size_override("font_size", 11)
 
 	_claude_tooltip = PanelContainer.new()
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.11, 0.13, 0.16, 0.95)  # Darker than #252B34
-	style.border_color = Color(0.3, 0.3, 0.35)
-	style.set_border_width_all(1)
-	style.set_corner_radius_all(4)
-	style.set_content_margin_all(6)
-	_claude_tooltip.add_theme_stylebox_override("panel", style)
-	_claude_tooltip.add_child(label)
+	_claude_tooltip_style = StyleBoxFlat.new()
+	_claude_tooltip_style.bg_color = GDLintThemeColors.get_color("tooltip_bg")
+	_claude_tooltip_style.border_color = GDLintThemeColors.get_color("tooltip_border")
+	_claude_tooltip_style.set_border_width_all(1)
+	_claude_tooltip_style.set_corner_radius_all(4)
+	_claude_tooltip_style.set_content_margin_all(6)
+	_claude_tooltip.add_theme_stylebox_override("panel", _claude_tooltip_style)
+	_claude_tooltip.add_child(_claude_tooltip_label)
 	_claude_tooltip.visible = false
 	_claude_tooltip.z_index = 100
 	add_child(_claude_tooltip)
@@ -878,13 +947,13 @@ func _create_popup_container() -> PanelContainer:
 	popup.z_index = 200
 	popup.top_level = true
 
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.11, 0.13, 0.16, 0.98)  # Darker than #252B34
-	style.border_color = Color(0.3, 0.35, 0.45, 0.8)
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(8)
-	style.set_content_margin_all(16)
-	popup.add_theme_stylebox_override("panel", style)
+	_claude_popup_style = StyleBoxFlat.new()
+	_claude_popup_style.bg_color = GDLintThemeColors.get_color("popup_bg")
+	_claude_popup_style.border_color = GDLintThemeColors.get_color("popup_border")
+	_claude_popup_style.set_border_width_all(2)
+	_claude_popup_style.set_corner_radius_all(8)
+	_claude_popup_style.set_content_margin_all(16)
+	popup.add_theme_stylebox_override("panel", _claude_popup_style)
 	return popup
 
 
@@ -895,12 +964,11 @@ func _create_popup_vbox() -> VBoxContainer:
 
 
 func _add_popup_title(vbox: VBoxContainer) -> void:
-	var title := Label.new()
-	title.text = "Customize Claude Launch"
-	title.add_theme_font_size_override("font_size", 16)
-	title.add_theme_color_override("font_color", Color(0.9, 0.9, 0.95))
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(title)
+	_claude_popup_title = Label.new()
+	_claude_popup_title.text = "Customize Claude Launch"
+	_claude_popup_title.add_theme_font_size_override("font_size", 16)
+	_claude_popup_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(_claude_popup_title)
 
 	var sep := HSeparator.new()
 	sep.add_theme_constant_override("separation", 6)
@@ -911,7 +979,6 @@ func _create_section_label(label_text: String) -> Label:
 	var label := Label.new()
 	label.text = label_text
 	label.add_theme_font_size_override("font_size", 13)
-	label.add_theme_color_override("font_color", Color(0.75, 0.75, 0.8))
 	return label
 
 
@@ -924,13 +991,11 @@ func _add_popup_context_section(vbox: VBoxContainer) -> void:
 	_claude_customize_context.scroll_active = true
 	_claude_customize_context.custom_minimum_size = Vector2(0, 100)
 	_claude_customize_context.add_theme_font_size_override("normal_font_size", 11)
-	_claude_customize_context.add_theme_color_override("default_color", Color(0.7, 0.75, 0.8))
-
-	var context_style := StyleBoxFlat.new()
-	context_style.bg_color = Color(0.09, 0.11, 0.14, 1.0)  # Input area - darkest
-	context_style.set_corner_radius_all(4)
-	context_style.set_content_margin_all(8)
-	_claude_customize_context.add_theme_stylebox_override("normal", context_style)
+	_claude_popup_context_style = StyleBoxFlat.new()
+	_claude_popup_context_style.bg_color = GDLintThemeColors.get_color("input_bg")
+	_claude_popup_context_style.set_corner_radius_all(4)
+	_claude_popup_context_style.set_content_margin_all(8)
+	_claude_customize_context.add_theme_stylebox_override("normal", _claude_popup_context_style)
 	vbox.add_child(_claude_customize_context)
 
 
@@ -1211,7 +1276,7 @@ func _build_active_filters_text(count: int) -> String:
 	if current_file_filter != "":
 		active.append("\"%s\"" % current_file_filter)
 	if active.size() > 0:
-		return "[color=#888888]Filters: %s (%d matches)[/color]\n\n" % [", ".join(active), count]
+		return "[color=%s]Filters: %s (%d matches)[/color]\n\n" % [_muted_hex, ", ".join(active), count]
 	return ""
 
 
@@ -1267,7 +1332,7 @@ func _display_results() -> void:
 	bbcode += _format_severity_section(grouped.info, "INFO", "🔵", "#6bcb77", "info")
 
 	if filtered.size() == 0:
-		bbcode += "[color=#888888]No issues matching current filters[/color]"
+		bbcode += "[color=%s]No issues matching current filters[/color]" % _muted_hex
 
 	if settings_manager.show_ignored_issues:
 		bbcode += _format_ignored_section()

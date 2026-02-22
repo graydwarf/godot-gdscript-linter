@@ -30,7 +30,7 @@ func create_card(controls: Dictionary) -> GDLintCollapsibleCard:
 
 func _add_separator(parent: VBoxContainer) -> void:
 	var sep := HSeparator.new()
-	sep.add_theme_color_override("separator", Color(0.3, 0.35, 0.4, 0.5))
+	sep.add_theme_color_override("separator", GDLintThemeColors.get_color("separator"))
 	parent.add_child(sep)
 
 
@@ -42,13 +42,13 @@ func _add_section_header(parent: VBoxContainer, title: String, description: Stri
 	var header := Label.new()
 	header.text = title
 	header.add_theme_font_size_override("font_size", 14)
-	header.add_theme_color_override("font_color", Color(0.8, 0.82, 0.85))
+
 	hbox.add_child(header)
 
 	var desc := Label.new()
 	desc.text = " -   " + description
 	desc.add_theme_font_size_override("font_size", 14)
-	desc.add_theme_color_override("font_color", Color(0.55, 0.57, 0.6))
+	desc.add_theme_color_override("font_color", GDLintThemeColors.get_color("font_muted"))
 	hbox.add_child(desc)
 
 
@@ -57,12 +57,14 @@ func _add_enable_section(parent: VBoxContainer, controls: Dictionary) -> void:
 
 	controls.claude_enabled_check = CheckBox.new()
 	controls.claude_enabled_check.text = "Enable Claude Code buttons"
+	var font_color: Color = EditorInterface.get_editor_theme().get_color("font_color", "Editor")
+	controls.claude_enabled_check.add_theme_color_override("font_pressed_color", font_color)
 	parent.add_child(controls.claude_enabled_check)
 
 	var desc := Label.new()
 	desc.text = "Adds clickable icons next to issues to launch Claude Code with context."
 	desc.add_theme_font_size_override("font_size", 12)
-	desc.add_theme_color_override("font_color", Color(0.45, 0.47, 0.5))
+	desc.add_theme_color_override("font_color", GDLintThemeColors.get_color("font_dimmed"))
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	parent.add_child(desc)
 
@@ -78,13 +80,7 @@ func _add_command_section(parent: VBoxContainer, controls: Dictionary) -> void:
 	controls.claude_command_edit.placeholder_text = DEFAULT_COMMAND
 	controls.claude_command_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
-	var cmd_border_style := StyleBoxFlat.new()
-	cmd_border_style.bg_color = Color(0.09, 0.11, 0.14)  # Input area - darkest
-	cmd_border_style.border_color = Color(0.3, 0.32, 0.35)
-	cmd_border_style.set_border_width_all(1)
-	cmd_border_style.set_corner_radius_all(2)
-	cmd_border_style.content_margin_left = 8
-	controls.claude_command_edit.add_theme_stylebox_override("normal", cmd_border_style)
+	controls.claude_command_edit.add_theme_stylebox_override("normal", GDLintThemeColors.create_input_style())
 
 	cmd_hbox.add_child(controls.claude_command_edit)
 
@@ -98,7 +94,7 @@ func _add_command_section(parent: VBoxContainer, controls: Dictionary) -> void:
 	var hint := Label.new()
 	hint.text = "Issue context is passed automatically. Add CLI flags as needed (e.g. --verbose)."
 	hint.add_theme_font_size_override("font_size", 12)
-	hint.add_theme_color_override("font_color", Color(0.45, 0.47, 0.5))
+	hint.add_theme_color_override("font_color", GDLintThemeColors.get_color("font_dimmed"))
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	parent.add_child(hint)
 
@@ -117,13 +113,13 @@ func _add_instructions_section(parent: VBoxContainer, controls: Dictionary) -> v
 	var header := Label.new()
 	header.text = "Custom Instructions"
 	header.add_theme_font_size_override("font_size", 14)
-	header.add_theme_color_override("font_color", Color(0.8, 0.82, 0.85))
+
 	header_hbox.add_child(header)
 
 	var desc := Label.new()
 	desc.text = " -   Extra context appended to prompts"
 	desc.add_theme_font_size_override("font_size", 14)
-	desc.add_theme_color_override("font_color", Color(0.55, 0.57, 0.6))
+	desc.add_theme_color_override("font_color", GDLintThemeColors.get_color("font_muted"))
 	header_hbox.add_child(desc)
 
 	controls.claude_instructions_reset_button = Button.new()
@@ -139,11 +135,7 @@ func _add_instructions_section(parent: VBoxContainer, controls: Dictionary) -> v
 	controls.claude_instructions_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	controls.claude_instructions_edit.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
 
-	var border_style := StyleBoxFlat.new()
-	border_style.bg_color = Color(0.09, 0.11, 0.14)  # Input area - darkest
-	border_style.border_color = Color(0.3, 0.32, 0.35)
-	border_style.set_border_width_all(1)
-	border_style.set_corner_radius_all(2)
+	var border_style := GDLintThemeColors.create_input_style()
 	border_style.set_content_margin_all(4)
 	border_style.content_margin_left = 8
 	controls.claude_instructions_edit.add_theme_stylebox_override("normal", border_style)

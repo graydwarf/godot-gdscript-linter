@@ -30,13 +30,7 @@ func _init(reset_icon: Texture2D) -> void:
 
 # Creates the standard card style used by all settings cards
 static func create_card_style() -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.145, 0.169, 0.204, 1.0)  # #252B34
-	style.border_color = Color(0.3, 0.35, 0.45, 0.5)
-	style.set_border_width_all(1)
-	style.set_corner_radius_all(6)
-	style.set_content_margin_all(12)
-	return style
+	return GDLintThemeColors.create_card_style()
 
 
 # Creates the scroll container wrapper for settings panel
@@ -131,7 +125,6 @@ func create_export_options_card(controls: Dictionary) -> GDLintCollapsibleCard:
 
 	var folder_label := Label.new()
 	folder_label.text = "Export Folder:"
-	folder_label.add_theme_color_override("font_color", Color(0.7, 0.72, 0.75))
 	folder_hbox.add_child(folder_label)
 
 	controls.export_folder_edit = LineEdit.new()
@@ -265,7 +258,7 @@ func _add_section_header(container: VBoxContainer, text: String) -> void:
 	var label := Label.new()
 	label.text = text
 	label.add_theme_font_size_override("font_size", 13)
-	label.add_theme_color_override("font_color", Color(0.5, 0.7, 0.9))
+	label.add_theme_color_override("font_color", GDLintThemeColors.get_color("font_muted"))
 	container.add_child(label)
 
 
@@ -286,6 +279,8 @@ func _add_check_to_grid(grid: GridContainer, label_text: String, tooltip: String
 	check.tooltip_text = tooltip
 	check.button_pressed = true  # Default to enabled
 	check.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var font_color: Color = EditorInterface.get_editor_theme().get_color("font_color", "Editor")
+	check.add_theme_color_override("font_pressed_color", font_color)
 	grid.add_child(check)
 	return check
 
@@ -356,7 +351,7 @@ func create_cli_options_card(controls: Dictionary) -> GDLintCollapsibleCard:
 
 	var info_label := Label.new()
 	info_label.text = "(Settings auto-sync to gdlint.json)"
-	info_label.add_theme_color_override("font_color", Color(0.5, 0.55, 0.6))
+	info_label.add_theme_color_override("font_color", GDLintThemeColors.get_color("font_muted"))
 	info_label.add_theme_font_size_override("font_size", 12)
 	export_row.add_child(info_label)
 
@@ -372,14 +367,14 @@ func create_header_bar() -> HBoxContainer:
 	var title := Label.new()
 	title.text = "GDScript Linter"
 	title.add_theme_font_size_override("font_size", 17)
-	title.add_theme_color_override("font_color", Color(0.4, 0.75, 1.0))
+	title.add_theme_color_override("font_color", GDLintThemeColors.get_color("accent"))
 	hbox.add_child(title)
 
 	# Subtitle: " - Code Quality Analyzer for GDScript" in muted color
 	var subtitle := Label.new()
 	subtitle.text = " -   Code Quality Analyzer for GDScript"
 	subtitle.add_theme_font_size_override("font_size", 17)
-	subtitle.add_theme_color_override("font_color", Color(0.6, 0.65, 0.7))
+	# No color override - inherits default editor font color
 	hbox.add_child(subtitle)
 
 	# Spacer to push links to the right
@@ -398,8 +393,8 @@ func create_header_bar() -> HBoxContainer:
 		btn.text = data[0]
 		btn.flat = true
 		btn.tooltip_text = data[1]
-		btn.add_theme_color_override("font_color", Color(0.5, 0.7, 1.0))
-		btn.add_theme_color_override("font_hover_color", Color(0.7, 0.85, 1.0))
+		# No font_color override - inherits default editor font color
+		btn.add_theme_color_override("font_hover_color", GDLintThemeColors.get_color("accent"))
 		btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		var url: String = data[1]
 		btn.pressed.connect(func(): OS.shell_open(url))
@@ -414,6 +409,8 @@ func _create_checkbox(label_text: String, container: HBoxContainer, tooltip: Str
 	check.text = label_text
 	if tooltip != "":
 		check.tooltip_text = tooltip
+	var font_color: Color = EditorInterface.get_editor_theme().get_color("font_color", "Editor")
+	check.add_theme_color_override("font_pressed_color", font_color)
 	container.add_child(check)
 	return check
 
@@ -422,7 +419,6 @@ func _create_checkbox(label_text: String, container: HBoxContainer, tooltip: Str
 func _add_spin_row(grid: GridContainer, label_text: String, min_val: int, max_val: int, current_val: int, default_val: int) -> SpinBox:
 	var label := Label.new()
 	label.text = label_text
-	label.add_theme_color_override("font_color", Color(0.7, 0.72, 0.75))
 	grid.add_child(label)
 
 	var spin := SpinBox.new()

@@ -21,7 +21,7 @@ func create_card_content(container: VBoxContainer) -> void:
 
 func _add_separator(parent: VBoxContainer) -> void:
 	var sep := HSeparator.new()
-	sep.add_theme_color_override("separator", Color(0.3, 0.35, 0.4, 0.5))
+	sep.add_theme_color_override("separator", GDLintThemeColors.get_color("separator"))
 	parent.add_child(sep)
 
 
@@ -32,22 +32,20 @@ func _add_section_header(parent: VBoxContainer, title: String, description: Stri
 
 	var header := Label.new()
 	header.text = title
-	header.add_theme_font_size_override("font_size", 14)
-	header.add_theme_color_override("font_color", Color(0.8, 0.82, 0.85))
+	header.add_theme_font_size_override("font_size", 15)
 	hbox.add_child(header)
 
 	var desc := Label.new()
 	desc.text = " -   " + description
-	desc.add_theme_font_size_override("font_size", 14)
-	desc.add_theme_color_override("font_color", Color(0.55, 0.57, 0.6))
+	desc.add_theme_font_size_override("font_size", 15)
+	desc.add_theme_color_override("font_color", GDLintThemeColors.get_color("font_muted"))
 	hbox.add_child(desc)
 
 
 func _add_code_block(parent: VBoxContainer, code: String) -> void:
 	var code_label := Label.new()
 	code_label.text = code
-	code_label.add_theme_font_size_override("font_size", 12)
-	code_label.add_theme_color_override("font_color", Color(0.7, 0.8, 0.6))
+	code_label.add_theme_font_size_override("font_size", 13)
 	code_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	parent.add_child(code_label)
 
@@ -93,14 +91,13 @@ func _add_defensive_table(parent: VBoxContainer) -> void:
 	for entry in directives:
 		var directive_label := Label.new()
 		directive_label.text = entry[0]
-		directive_label.add_theme_font_size_override("font_size", 12)
-		directive_label.add_theme_color_override("font_color", Color(0.7, 0.8, 0.6))
+		directive_label.add_theme_font_size_override("font_size", 13)
 		grid.add_child(directive_label)
 
 		var scope_label := Label.new()
 		scope_label.text = entry[1]
-		scope_label.add_theme_font_size_override("font_size", 12)
-		scope_label.add_theme_color_override("font_color", Color(0.55, 0.57, 0.6))
+		scope_label.add_theme_font_size_override("font_size", 13)
+		scope_label.add_theme_color_override("font_color", GDLintThemeColors.get_color("font_muted"))
 		grid.add_child(scope_label)
 
 
@@ -159,37 +156,36 @@ func _add_ignore_table(parent: VBoxContainer) -> void:
 	for entry in directives:
 		var directive_label := Label.new()
 		directive_label.text = entry[0]
-		directive_label.add_theme_font_size_override("font_size", 12)
-		directive_label.add_theme_color_override("font_color", Color(0.7, 0.8, 0.6))
+		directive_label.add_theme_font_size_override("font_size", 13)
 		grid.add_child(directive_label)
 
 		var scope_label := Label.new()
 		scope_label.text = entry[1]
-		scope_label.add_theme_font_size_override("font_size", 12)
-		scope_label.add_theme_color_override("font_color", Color(0.55, 0.57, 0.6))
+		scope_label.add_theme_font_size_override("font_size", 13)
+		scope_label.add_theme_color_override("font_color", GDLintThemeColors.get_color("font_muted"))
 		grid.add_child(scope_label)
 
 
+# Example directive header + code block, both at the same size/color as table entries
 func _add_ignore_example(parent: VBoxContainer, directive: String, code: String) -> void:
-	# Directive name as mini-header
+	# Directive name as mini-header (same style as table directive labels)
 	var header := Label.new()
 	header.text = directive
-	header.add_theme_font_size_override("font_size", 12)
-	header.add_theme_color_override("font_color", Color(0.7, 0.8, 0.6))
+	header.add_theme_font_size_override("font_size", 13)
 	parent.add_child(header)
 
-	# Code example
+	# Code example (same size as table entries, muted for secondary emphasis)
 	var code_label := Label.new()
 	code_label.text = code
-	code_label.add_theme_font_size_override("font_size", 11)
-	code_label.add_theme_color_override("font_color", Color(0.6, 0.65, 0.7))
+	code_label.add_theme_font_size_override("font_size", 13)
+	code_label.add_theme_color_override("font_color", GDLintThemeColors.get_color("font_muted"))
 	parent.add_child(code_label)
 
 
 func _add_thin_separator(parent: VBoxContainer) -> void:
 	var sep := HSeparator.new()
 	sep.add_theme_constant_override("separation", 4)
-	sep.add_theme_color_override("separator", Color(0.25, 0.28, 0.32, 0.4))
+	sep.add_theme_color_override("separator", GDLintThemeColors.get_color("separator_thin"))
 	parent.add_child(sep)
 
 
@@ -232,8 +228,7 @@ func _add_cli_section(parent: VBoxContainer) -> void:
 func _add_cli_table(parent: VBoxContainer, title: String, entries: Array) -> void:
 	var title_label := Label.new()
 	title_label.text = title
-	title_label.add_theme_font_size_override("font_size", 12)
-	title_label.add_theme_color_override("font_color", Color(0.7, 0.72, 0.75))
+	title_label.add_theme_font_size_override("font_size", 13)
 	parent.add_child(title_label)
 
 	var grid := GridContainer.new()
@@ -245,28 +240,26 @@ func _add_cli_table(parent: VBoxContainer, title: String, entries: Array) -> voi
 	for entry in entries:
 		var key_label := Label.new()
 		key_label.text = entry[0]
-		key_label.add_theme_font_size_override("font_size", 12)
-		key_label.add_theme_color_override("font_color", Color(0.7, 0.8, 0.6))
+		key_label.add_theme_font_size_override("font_size", 13)
 		grid.add_child(key_label)
 
 		var value_label := Label.new()
 		value_label.text = entry[1]
-		value_label.add_theme_font_size_override("font_size", 12)
-		value_label.add_theme_color_override("font_color", Color(0.55, 0.57, 0.6))
+		value_label.add_theme_font_size_override("font_size", 13)
+		value_label.add_theme_color_override("font_color", GDLintThemeColors.get_color("font_muted"))
 		grid.add_child(value_label)
 
 
 func _add_cli_example(parent: VBoxContainer, title: String, command: String) -> void:
 	var title_label := Label.new()
 	title_label.text = title
-	title_label.add_theme_font_size_override("font_size", 12)
-	title_label.add_theme_color_override("font_color", Color(0.7, 0.8, 0.6))
+	title_label.add_theme_font_size_override("font_size", 13)
 	parent.add_child(title_label)
 
 	var cmd_label := Label.new()
 	cmd_label.text = command
-	cmd_label.add_theme_font_size_override("font_size", 11)
-	cmd_label.add_theme_color_override("font_color", Color(0.6, 0.65, 0.7))
+	cmd_label.add_theme_font_size_override("font_size", 13)
+	cmd_label.add_theme_color_override("font_color", GDLintThemeColors.get_color("font_muted"))
 	cmd_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	parent.add_child(cmd_label)
 
@@ -289,20 +282,19 @@ func _add_shortcuts_section(parent: VBoxContainer) -> void:
 	for shortcut in shortcuts:
 		var key_label := Label.new()
 		key_label.text = shortcut[0]
-		key_label.add_theme_font_size_override("font_size", 12)
-		key_label.add_theme_color_override("font_color", Color(0.7, 0.8, 0.6))
+		key_label.add_theme_font_size_override("font_size", 13)
 		grid.add_child(key_label)
 
 		var desc_label := Label.new()
 		desc_label.text = shortcut[1]
-		desc_label.add_theme_font_size_override("font_size", 12)
-		desc_label.add_theme_color_override("font_color", Color(0.55, 0.57, 0.6))
+		desc_label.add_theme_font_size_override("font_size", 13)
+		desc_label.add_theme_color_override("font_color", GDLintThemeColors.get_color("font_muted"))
 		grid.add_child(desc_label)
 
 
 func _add_license_section(parent: VBoxContainer) -> void:
 	var license_lbl := Label.new()
 	license_lbl.text = "MIT License - Copyright (c) 2025 Poplava"
-	license_lbl.add_theme_font_size_override("font_size", 11)
-	license_lbl.add_theme_color_override("font_color", Color(0.45, 0.47, 0.5))
+	license_lbl.add_theme_font_size_override("font_size", 12)
+	license_lbl.add_theme_color_override("font_color", GDLintThemeColors.get_color("font_dimmed"))
 	parent.add_child(license_lbl)

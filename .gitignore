@@ -30,7 +30,7 @@ gdlint.json
 gdlint-custom.json
 
 # Local documentation/plans
-docs/
+local-docs/
 
 # Benchmark test files
 temp/

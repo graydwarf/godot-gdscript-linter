@@ -52,8 +52,21 @@ func _collect_declarations(lines: Array) -> void:
 
 		# Check for variable declarations
 		if config.check_unused_variables:
-			_extract_variable_declaration(trimmed, line_num)
+			if not _is_property_with_accessor(trimmed, i, lines):
+				_extract_variable_declaration(trimmed, line_num)
 			_extract_for_loop_variable(trimmed, line_num)
+
+
+func _is_property_with_accessor(trimmed: String, index: int, lines: Array) -> bool:
+	if not trimmed.begins_with("var ") and not trimmed.begins_with("@onready var "):
+		return false
+	if not trimmed.ends_with(":"):
+		return false
+	var next_index := index + 1
+	if next_index >= lines.size():
+		return false
+	var next_trimmed: String = lines[next_index].strip_edges()
+	return next_trimmed == "get:" or next_trimmed == "set:" or next_trimmed.begins_with("get(") or next_trimmed.begins_with("set(")
 
 
 func _extract_func_name(line: String) -> String:
@@ -81,7 +94,7 @@ func _extract_parameters(line: String, line_num: int, func_name: String) -> void
 	if params_str.is_empty():
 		return
 
-	var params := params_str.split(",")
+	var params := _split_parameters(params_str)
 	for param in params:
 		var param_name := _extract_param_name(param.strip_edges())
 		if param_name.is_empty():
@@ -97,6 +110,27 @@ func _extract_parameters(line: String, line_num: int, func_name: String) -> void
 			"type": "parameter",
 			"used": false
 		})
+
+
+func _split_parameters(params_str: String) -> Array:
+	var result: Array = []
+	var current := ""
+	var bracket_depth := 0
+	for character in params_str:
+		if character == "[":
+			bracket_depth += 1
+			current += character
+		elif character == "]":
+			bracket_depth -= 1
+			current += character
+		elif character == "," and bracket_depth == 0:
+			result.append(current)
+			current = ""
+		else:
+			current += character
+	if not current.strip_edges().is_empty():
+		result.append(current)
+	return result
 
 
 func _extract_param_name(param: String) -> String:

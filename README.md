@@ -247,9 +247,23 @@ ignore_underscore_prefix = true
 ascii_only = true
 sealed_classes = true
 
+[scanning]
+scan_addons = false
+included_addons = gdscript-linter, my-other-addon
+excluded_addons = some-third-party-addon
+
 [exclude]
 paths = addons/, .godot/, tests/mocks/
 ```
+
+**Scan Options precedence:**
+
+| `included_addons` | `scan_addons` | Result |
+|---|---|---|
+| non-empty | any | Scan ONLY the listed addons |
+| empty | true | Scan all addons except `excluded_addons` |
+| empty | false | Scan no addons (default) |
+
 
 ## CI/CD Integration
 

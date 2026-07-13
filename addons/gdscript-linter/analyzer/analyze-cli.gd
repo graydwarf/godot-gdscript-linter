@@ -155,6 +155,14 @@ func _run_analysis() -> void:
 		config.respect_ignore_directives = false
 	_apply_check_filter_to_config(config)
 
+	# Fold explicitly-targeted addon paths into included_addons so they are scanned
+	for target_path in _target_paths:
+		var normalized := target_path.replace("\\", "/")
+		if normalized.contains("addons/"):
+			var addon_name := AnalysisConfigClass.get_addon_name(target_path)
+			if not addon_name.is_empty() and not config.included_addons.has(addon_name):
+				config.included_addons.append(addon_name)
+
 	var analyzer = CodeAnalyzerClass.new(config)
 
 	# Analyze all paths and merge results

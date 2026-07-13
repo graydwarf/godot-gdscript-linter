@@ -54,6 +54,8 @@ var export_folder_path: String = ""  # Empty = res:// (project root)
 var respect_gdignore: bool = true
 var scan_addons: bool = false
 var remember_filter_selections: bool = false
+var included_addons_text: String = ""
+var excluded_addons_text: String = ""
 
 # Persisted filter selections (only used when remember_filter_selections is true)
 var saved_severity_filter: int = 0  # Index in dropdown
@@ -132,6 +134,11 @@ func load_settings() -> void:
 	scan_addons = _get_setting(editor_settings, "code_quality/scanning/scan_addons", false)
 	config.scan_addons = scan_addons
 	remember_filter_selections = _get_setting(editor_settings, "code_quality/scanning/remember_filters", false)
+	# Fall back to whatever load_from_json already populated on config, so a
+	# hand-edited gdlint.json isn't clobbered when EditorSettings has no override yet.
+	included_addons_text = _get_setting(editor_settings, "code_quality/scanning/included_addons", ", ".join(config.included_addons))
+	excluded_addons_text = _get_setting(editor_settings, "code_quality/scanning/excluded_addons", ", ".join(config.excluded_addons))
+	_update_config_addon_arrays()
 
 	# Load saved filter selections
 	saved_severity_filter = _get_setting(editor_settings, "code_quality/filters/severity", 0)
@@ -275,6 +282,8 @@ func _apply_to_ui() -> void:
 		"claude_command_edit": func(): return claude_code_command,
 		"claude_instructions_edit": func(): return claude_custom_instructions,
 		"export_folder_edit": func(): return export_folder_path,
+		"included_addons_edit": func(): return included_addons_text,
+		"excluded_addons_edit": func(): return excluded_addons_text,
 	}
 
 	for control_key in text_mappings:
@@ -317,6 +326,14 @@ func connect_controls(export_btn: Button, html_export_btn: Button, md_export_btn
 		controls.scan_addons_check.toggled.connect(_on_scan_addons_toggled)
 	if controls.has("remember_filters_check"):
 		controls.remember_filters_check.toggled.connect(_on_remember_filters_toggled)
+	if controls.has("included_addons_edit"):
+		controls.included_addons_edit.text_changed.connect(_on_included_addons_changed)
+	if controls.has("included_addons_reset_btn"):
+		controls.included_addons_reset_btn.pressed.connect(_on_included_addons_reset)
+	if controls.has("excluded_addons_edit"):
+		controls.excluded_addons_edit.text_changed.connect(_on_excluded_addons_changed)
+	if controls.has("excluded_addons_reset_btn"):
+		controls.excluded_addons_reset_btn.pressed.connect(_on_excluded_addons_reset)
 
 	# Code checks - Enable All / Disable All buttons
 	if controls.has("enable_all_checks_btn"):
@@ -370,7 +387,9 @@ func _is_analysis_setting(key: String) -> bool:
 	return (key.begins_with("code_quality/limits/") or
 			key.begins_with("code_quality/checks/") or
 			key.begins_with("code_quality/scanning/respect_gdignore") or
-			key.begins_with("code_quality/scanning/scan_addons"))
+			key.begins_with("code_quality/scanning/scan_addons") or
+			key.begins_with("code_quality/scanning/included_addons") or
+			key.begins_with("code_quality/scanning/excluded_addons"))
 
 
 # Sync current config state to gdlint.json in project root
@@ -465,6 +484,47 @@ func _on_scan_addons_toggled(pressed: bool) -> void:
 func _on_remember_filters_toggled(pressed: bool) -> void:
 	remember_filter_selections = pressed
 	save_setting("code_quality/scanning/remember_filters", pressed)
+
+
+func _update_config_addon_arrays() -> void:
+	config.included_addons.clear()
+	for addon in included_addons_text.split(","):
+		var trimmed := addon.strip_edges()
+		if not trimmed.is_empty():
+			config.included_addons.append(trimmed)
+	config.excluded_addons.clear()
+	for addon in excluded_addons_text.split(","):
+		var trimmed := addon.strip_edges()
+		if not trimmed.is_empty():
+			config.excluded_addons.append(trimmed)
+
+
+func _on_included_addons_changed(new_text: String) -> void:
+	included_addons_text = new_text
+	_update_config_addon_arrays()
+	save_setting("code_quality/scanning/included_addons", new_text)
+
+
+func _on_included_addons_reset() -> void:
+	included_addons_text = ""
+	if controls.has("included_addons_edit"):
+		controls.included_addons_edit.text = ""
+	_update_config_addon_arrays()
+	save_setting("code_quality/scanning/included_addons", "")
+
+
+func _on_excluded_addons_changed(new_text: String) -> void:
+	excluded_addons_text = new_text
+	_update_config_addon_arrays()
+	save_setting("code_quality/scanning/excluded_addons", new_text)
+
+
+func _on_excluded_addons_reset() -> void:
+	excluded_addons_text = ""
+	if controls.has("excluded_addons_edit"):
+		controls.excluded_addons_edit.text = ""
+	_update_config_addon_arrays()
+	save_setting("code_quality/scanning/excluded_addons", "")
 
 
 # Save filter selections (called by dock.gd when filters change)

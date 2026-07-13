@@ -99,7 +99,9 @@ Example `gdlint.json`:
 	},
 	"scanning": {
 		"respect_gdignore": true,
-		"scan_addons": false
+		"scan_addons": false,
+		"included_addons": [],
+		"excluded_addons": []
 	},
 	"exclude": {
 		"paths": ["addons/", ".godot/", "tests/mocks/"]
@@ -315,7 +317,7 @@ When using this CLI:
 1. **Always use `--` before any linter options** - required separator
 2. **Pass directory paths, not file paths** - the linter scans directories recursively
 3. **The script path is relative to the project with the linter installed** - use `--path` for external projects
-4. **Default excludes `addons/`** - if analyzing a plugin, the target project needs `scan_addons: true` in gdlint.json
+4. **Targeting a specific addon** - pass its path as a positional argument (e.g. `-- addons/myaddon`) and it is automatically added to `included_addons` for that run
 
 Example for analyzing an external project:
 ```bash

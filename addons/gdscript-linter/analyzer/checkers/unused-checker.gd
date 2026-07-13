@@ -65,16 +65,30 @@ func _is_property_with_accessor(trimmed: String, index: int, lines: Array) -> bo
 	accessor_regex.compile(":\\s*(?:get|set)\\s*[:(]")
 	if accessor_regex.search(trimmed):
 		return true
-	# Multi-line property: var x: int:\n\tget:
+	# Multi-line property: var x: int:\n\tget: — walk past blank/comment lines
 	if not trimmed.ends_with(":"):
 		return false
-	var next_index := index + 1
-	if next_index >= lines.size():
-		return false
-	var next_trimmed: String = lines[next_index].strip_edges()
+	var var_indent := _leading_whitespace_count(lines[index])
 	var next_line_regex := RegEx.new()
 	next_line_regex.compile("^(?:get|set)\\s*[:(]")
-	return next_line_regex.search(next_trimmed) != null
+	var next_index := index + 1
+	while next_index < lines.size():
+		var next_line: String = lines[next_index]
+		var next_trimmed := next_line.strip_edges()
+		if next_trimmed.is_empty() or next_trimmed.begins_with("#"):
+			next_index += 1
+			continue
+		if _leading_whitespace_count(next_line) <= var_indent:
+			return false
+		return next_line_regex.search(next_trimmed) != null
+	return false
+
+
+func _leading_whitespace_count(line: String) -> int:
+	var count := 0
+	while count < line.length() and (line[count] == " " or line[count] == "\t"):
+		count += 1
+	return count
 
 
 func _extract_func_name(line: String) -> String:

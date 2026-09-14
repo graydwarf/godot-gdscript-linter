@@ -212,7 +212,9 @@ func _calculate_cyclomatic_complexity(body_lines: Array) -> int:
 			continue
 
 		# Count decision points
-		if trimmed.begins_with("if ") or " if " in trimmed:
+		# Only the statement form here. A line holding a ternary is counted by the
+		# ternary rule below, so matching " if " here as well counted it twice.
+		if trimmed.begins_with("if "):
 			complexity += 1
 		if trimmed.begins_with("elif "):
 			complexity += 1

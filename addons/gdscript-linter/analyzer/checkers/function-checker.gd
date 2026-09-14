@@ -23,6 +23,13 @@ func analyze_functions(lines: Array, file_result, add_issue_callback: Callable, 
 		var line: String = lines[i]
 		var trimmed := line.strip_edges()
 
+		# A static function is a function. Matching only "func " meant a static
+		# declaration never opened a new function, so its body was appended to the
+		# function above it and the static one was never analysed. Normalising here
+		# keeps the substr(5) assumption in _parse_function_signature valid.
+		if trimmed.begins_with("static func "):
+			trimmed = trimmed.substr(7)
+
 		if trimmed.begins_with("func "):
 			# Finalize previous function
 			if in_function and current_func:
